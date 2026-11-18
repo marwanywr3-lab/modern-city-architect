@@ -15,6 +15,11 @@ import moderncity.engine.StreamingBuilderEngine;
 import moderncity.item.ModItems;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +29,7 @@ public class ModernCityArchitect implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing Modern City Architect Mod v1.0.0...");
+        LOGGER.info("Initializing Modern City Architect Mod v1.0.1...");
 
         ModItems.register();
         StreamingBuilderEngine.register();
@@ -43,6 +48,22 @@ public class ModernCityArchitect implements ModInitializer {
             CatalogCommand.register(dispatcher);
         });
 
-        LOGGER.info("Modern City Architect Mod v1.0.0 initialized successfully!");
+        // Give all Architect tools + English User Guide automatically on join if player doesn't have them
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayerEntity player = handler.getPlayer();
+            if (!player.getInventory().contains(new ItemStack(ModItems.ARCHITECT_GUIDE))) {
+                player.getInventory().insertStack(new ItemStack(ModItems.VISUAL_CATALOG));
+                player.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
+                player.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
+                player.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
+                player.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
+                player.getInventory().insertStack(new ItemStack(ModItems.ARCHITECT_GUIDE));
+
+                player.sendMessage(Text.literal("Welcome to Modern City Architect! Right-click the Visual City Catalog or Architect User Guide in your hotbar.")
+                        .formatted(Formatting.AQUA), false);
+            }
+        });
+
+        LOGGER.info("Modern City Architect Mod v1.0.1 initialized successfully!");
     }
 }

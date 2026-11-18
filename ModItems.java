@@ -41,6 +41,12 @@ public class ModItems {
             new VisualCatalogItem(new Item.Settings().maxCount(1))
     );
 
+    public static final Item ARCHITECT_GUIDE = Registry.register(
+            Registries.ITEM,
+            Identifier.of(ModernCityArchitect.MOD_ID, "architect_guide"),
+            new ArchitectGuideItem(new Item.Settings().maxCount(1))
+    );
+
     public static final ItemGroup MODERN_CITY_GROUP = Registry.register(
             Registries.ITEM_GROUP,
             Identifier.of(ModernCityArchitect.MOD_ID, "modern_city_group"),
@@ -48,6 +54,7 @@ public class ModItems {
                     .icon(() -> new ItemStack(CITY_CONTROLLER))
                     .displayName(Text.translatable("itemGroup.modern-city-architect.main"))
                     .entries((context, entries) -> {
+                        entries.add(ARCHITECT_GUIDE);
                         entries.add(VISUAL_CATALOG);
                         entries.add(ROAD_WAND);
                         entries.add(CITY_CONTROLLER);
