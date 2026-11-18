@@ -25,7 +25,7 @@ public class BuildTowerCommand {
                 .requires(source -> source.hasPermissionLevel(2))
                 .then(CommandManager.argument("style", StringArgumentType.word())
                         .suggests((ctx, b) -> CommandSource.suggestMatching(
-                                List.of("classic", "setback", "curved", "cantilever", "twin", "mid", "high", "supertall"), b))
+                                List.of("twisted", "crystal", "arch", "garden", "sail", "mid", "high", "supertall"), b))
                         .executes(ctx -> executeBuild(ctx, -1))
                         .then(CommandManager.argument("height", IntegerArgumentType.integer(20, 480))
                                 .executes(ctx -> executeBuild(ctx, IntegerArgumentType.getInteger(ctx, "height"))))));
@@ -36,18 +36,18 @@ public class BuildTowerCommand {
         String arg = StringArgumentType.getString(context, "style").toLowerCase();
 
         int height = explicitHeight > 0 ? explicitHeight : switch (arg) {
-            case "mid" -> 30;
-            case "high" -> 80;
-            case "supertall" -> 120;
-            default -> 90;
+            case "mid" -> 35;
+            case "high" -> 85;
+            case "supertall" -> 135;
+            default -> 100;
         };
 
         TowerBuilderJob.Style style = switch (arg) {
-            case "setback", "high" -> TowerBuilderJob.Style.SETBACK;
-            case "curved", "supertall" -> TowerBuilderJob.Style.CURVED;
-            case "cantilever" -> TowerBuilderJob.Style.CANTILEVER;
-            case "twin" -> TowerBuilderJob.Style.TWIN;
-            default -> TowerBuilderJob.Style.CLASSIC;
+            case "crystal", "supertall" -> TowerBuilderJob.Style.CRYSTAL_DIAGRID;
+            case "arch" -> TowerBuilderJob.Style.ARCH_PORTAL;
+            case "garden", "mid" -> TowerBuilderJob.Style.SPIRAL_GARDEN;
+            case "sail" -> TowerBuilderJob.Style.SAIL_SPIRE;
+            default -> TowerBuilderJob.Style.TWISTED;
         };
 
         Direction facing = Direction.NORTH;
@@ -60,7 +60,7 @@ public class BuildTowerCommand {
 
         TowerBuilderJob job = new TowerBuilderJob(source.getWorld(), ownerId, anchor, facing, style, height);
         StreamingBuilderEngine.enqueueJob(job);
-        source.sendFeedback(() -> Text.literal("Queued " + job.getName() + " from Front-Left Anchor.")
+        source.sendFeedback(() -> Text.literal("Queued Sculptural " + job.getName() + "!")
                 .formatted(Formatting.AQUA), true);
         return 1;
     }

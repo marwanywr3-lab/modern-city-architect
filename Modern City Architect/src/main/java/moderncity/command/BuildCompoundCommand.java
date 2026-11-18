@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import moderncity.builder.ApartmentTowerJob;
 import moderncity.builder.CompoundBuilderJob;
+import moderncity.builder.LuxuryCompoundBuilderJob;
 import moderncity.engine.StreamingBuilderEngine;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -23,7 +24,8 @@ public class BuildCompoundCommand {
                 .requires(source -> source.hasPermissionLevel(2))
                 .then(CommandManager.literal("12").executes(ctx -> buildCompound(ctx, CompoundBuilderJob.CompoundSize.SMALL_12)))
                 .then(CommandManager.literal("16").executes(ctx -> buildCompound(ctx, CompoundBuilderJob.CompoundSize.MEDIUM_16)))
-                .then(CommandManager.literal("24").executes(ctx -> buildCompound(ctx, CompoundBuilderJob.CompoundSize.LARGE_24))));
+                .then(CommandManager.literal("24").executes(ctx -> buildCompound(ctx, CompoundBuilderJob.CompoundSize.LARGE_24)))
+                .then(CommandManager.literal("luxury").executes(BuildCompoundCommand::buildLuxury)));
 
         dispatcher.register(CommandManager.literal("buildapartments")
                 .requires(source -> source.hasPermissionLevel(2))
@@ -44,6 +46,20 @@ public class BuildCompoundCommand {
         BlockPos anchor = BlockPos.ofFloored(source.getPosition()).offset(facing, 2);
         StreamingBuilderEngine.enqueueJob(new CompoundBuilderJob(source.getWorld(), ownerId, anchor, facing, size));
         source.sendFeedback(() -> Text.literal("Queued " + size.label + " from Front-Left Anchor.").formatted(Formatting.AQUA), true);
+        return 1;
+    }
+
+    private static int buildLuxury(CommandContext<ServerCommandSource> context) {
+        ServerCommandSource source = context.getSource();
+        Direction facing = Direction.NORTH;
+        UUID ownerId = null;
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            ownerId = player.getUuid();
+            facing = player.getHorizontalFacing();
+        }
+        BlockPos anchor = BlockPos.ofFloored(source.getPosition()).offset(facing, 2);
+        StreamingBuilderEngine.enqueueJob(new LuxuryCompoundBuilderJob(source.getWorld(), ownerId, anchor, facing));
+        source.sendFeedback(() -> Text.literal("Queued Luxury 4BR Villa Compound (12 Large Villas)!").formatted(Formatting.GOLD), true);
         return 1;
     }
 

@@ -3,7 +3,10 @@ package moderncity.gui;
 import moderncity.builder.ApartmentTowerJob;
 import moderncity.builder.CompoundBuilderJob;
 import moderncity.builder.FacilityBuilderJob;
+import moderncity.builder.FinancialCenterBuilderJob;
 import moderncity.builder.HotelBuilderJob;
+import moderncity.builder.LuxuryCompoundBuilderJob;
+import moderncity.util.BuildingPreviewManager;
 import moderncity.builder.IntersectionBuilderJob;
 import moderncity.builder.MallBuilderJob;
 import moderncity.builder.OverpassBuilderJob;
@@ -39,17 +42,18 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
     private void populateCatalog() {
         // Row 1: Malls & 5 Tower Styles
         setEntry(10, Items.LIGHT_BLUE_STAINED_GLASS, "Modern Glass Mall (140x64, 3F)", Formatting.AQUA);
-        setEntry(11, Items.QUARTZ_BLOCK, "Tower: Classic (60b)", Formatting.WHITE);
-        setEntry(12, Items.TINTED_GLASS, "Tower: Setback (100b)", Formatting.BLUE);
-        setEntry(13, Items.BEACON, "Tower: Curved Skyscraper (160b)", Formatting.GOLD);
-        setEntry(14, Items.POLISHED_DEEPSLATE, "Tower: Cantilever (90b)", Formatting.AQUA);
-        setEntry(15, Items.DIAMOND_BLOCK, "Tower: Twin Skybridge (120b)", Formatting.GOLD);
+        setEntry(11, Items.QUARTZ_BLOCK, "Tower: Twisted Helix (85b)", Formatting.WHITE);
+        setEntry(12, Items.TINTED_GLASS, "Tower: Crystal Diagrid (135b)", Formatting.BLUE);
+        setEntry(13, Items.BEACON, "Tower: Arch Portal (120b)", Formatting.GOLD);
+        setEntry(14, Items.AZALEA_LEAVES, "Tower: Spiral Sky-Garden (95b)", Formatting.GREEN);
+        setEntry(15, Items.DIAMOND_BLOCK, "Tower: Diamond Sail Spire (160b)", Formatting.GOLD);
         setEntry(16, Items.WHITE_TERRACOTTA, "Plaza L-Shape (Cafe + Offices)", Formatting.YELLOW);
 
         // Row 2: Compounds, Apartments & Intersections
         setEntry(19, Items.OAK_DOOR, "Compound: 12 Modern Villas", Formatting.GREEN);
         setEntry(20, Items.BIRCH_DOOR, "Compound: 16 Modern Villas", Formatting.GREEN);
-        setEntry(21, Items.DARK_OAK_DOOR, "Compound: 24 Modern Villas", Formatting.GOLD);
+        setEntry(21, Items.DARK_OAK_DOOR, "Compound: 24 Villas", Formatting.GOLD);
+        setEntry(18, Items.EMERALD_BLOCK, "Compound: 12 Luxury 4BR Villas", Formatting.GREEN);
         setEntry(22, Items.BRICKS, "Apartment Tower (36x24, 10F)", Formatting.AQUA);
         setEntry(23, Items.GRAY_CONCRETE, "4-Way Medium Intersection", Formatting.WHITE);
         setEntry(24, Items.GRASS_BLOCK, "Green Roundabout", Formatting.GREEN);
@@ -72,6 +76,7 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
         setEntry(42, Items.DIAMOND_SHOVEL, "Get Mega-Terraformer", Formatting.GREEN);
         setEntry(43, Items.PAPER, "Get Custom Blueprint Saver", Formatting.YELLOW);
         setEntry(44, Items.MAGENTA_BED, "Build Grand Hotel (80x50x46)", Formatting.LIGHT_PURPLE);
+        setEntry(48, Items.GOLD_BLOCK, "Build Financial CENTER (3000x3000)", Formatting.GOLD);
         setEntry(49, Items.BARRIER, "GLOBAL UNDO (Last Build/Road)", Formatting.RED);
     }
 
@@ -89,14 +94,15 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
         BlockPos anchor = sp.getBlockPos().offset(facing, 2);
 
         switch (slotIndex) {
-            case 10 -> StreamingBuilderEngine.enqueueJob(new MallBuilderJob(world, sp.getUuid(), anchor, facing, 140, 64, 3));
-            case 11 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.CLASSIC, 60));
-            case 12 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.SETBACK, 100));
-            case 13 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.CURVED, 160));
-            case 14 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.CANTILEVER, 90));
-            case 15 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.TWIN, 120));
+            case 10 -> BuildingPreviewManager.setPreview(sp, "Modern Glass Mall", 64, 140, 26, (w, id, a, f) -> new MallBuilderJob(w, id, a, f, 140, 64, 3));
+            case 11 -> BuildingPreviewManager.setPreview(sp, "Twisted Helix Tower (85b)", 34, 34, 85, (w, id, a, f) -> new TowerBuilderJob(w, id, a, f, TowerBuilderJob.Style.TWISTED, 85));
+            case 12 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.CRYSTAL_DIAGRID, 135));
+            case 13 -> BuildingPreviewManager.setPreview(sp, "Arch Portal Tower (120b)", 34, 34, 120, (w, id, a, f) -> new TowerBuilderJob(w, id, a, f, TowerBuilderJob.Style.ARCH_PORTAL, 120));
+            case 14 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.SPIRAL_GARDEN, 95));
+            case 15 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, facing, TowerBuilderJob.Style.SAIL_SPIRE, 160));
             case 16 -> StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, sp.getUuid(), anchor, facing, PlazaBuilderJob.Shape.L, PlazaBuilderJob.Layout.OFFICE, 4));
-            case 19 -> StreamingBuilderEngine.enqueueJob(new CompoundBuilderJob(world, sp.getUuid(), anchor, facing, CompoundBuilderJob.CompoundSize.SMALL_12));
+            case 18 -> BuildingPreviewManager.setPreview(sp, "Luxury 4BR Villa Compound", 104, 136, 12, LuxuryCompoundBuilderJob::new);
+            case 19 -> BuildingPreviewManager.setPreview(sp, "Compound (12 Villas)", 68, 88, 12, (w, id, a, f) -> new CompoundBuilderJob(w, id, a, f, CompoundBuilderJob.CompoundSize.SMALL_12));
             case 20 -> StreamingBuilderEngine.enqueueJob(new CompoundBuilderJob(world, sp.getUuid(), anchor, facing, CompoundBuilderJob.CompoundSize.MEDIUM_16));
             case 21 -> StreamingBuilderEngine.enqueueJob(new CompoundBuilderJob(world, sp.getUuid(), anchor, facing, CompoundBuilderJob.CompoundSize.LARGE_24));
             case 22 -> StreamingBuilderEngine.enqueueJob(new ApartmentTowerJob(world, sp.getUuid(), anchor, facing, 36, 24, 10));
@@ -116,7 +122,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
             case 41 -> sp.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
             case 42 -> sp.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
             case 43 -> sp.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
-            case 44 -> StreamingBuilderEngine.enqueueJob(new HotelBuilderJob(world, sp.getUuid(), anchor, facing, 80, 50, 46));
+            case 44 -> BuildingPreviewManager.setPreview(sp, "Grand Hotel (80x50x46)", 50, 80, 46, (w, id, a, f) -> new HotelBuilderJob(w, id, a, f, 80, 50, 46));
+            case 48 -> StreamingBuilderEngine.enqueueJob(new FinancialCenterBuilderJob(world, sp.getUuid(), anchor, facing));
             case 49 -> StreamingBuilderEngine.triggerGlobalUndo(sp.getUuid());
             default -> { return; }
         }
