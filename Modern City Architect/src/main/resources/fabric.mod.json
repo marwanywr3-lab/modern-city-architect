@@ -1,31 +1,34 @@
 {
-	"schemaVersion": 1,
-	"id": "modern-city-architect",
-	"version": "${version}",
-	"name": "Modern City Architect",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/modern-city-architect/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"moderncity.ModernCityArchitect"
-		]
-	},
-	"mixins": [
-		"modern-city-architect.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.20.1",
-		"minecraft": "~1.21.1",
-		"java": ">=21",
-		"fabric-api": "*"
-	}
+  "schemaVersion": 1,
+  "id": "modern-city-architect",
+  "version": "${version}",
+  "name": "Modern City Architect",
+  "description": "A modern voxel city-building mod featuring zero-lag streaming mega-malls, skyscrapers, and smart road networks.",
+  "authors": [
+    "Me!"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/modern-city-architect/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "moderncity.ModernCityArchitect"
+    ],
+    "client": [
+      "moderncity.client.ModernCityClient"
+    ]
+  },
+  "mixins": [
+    "modern-city-architect.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
 }
