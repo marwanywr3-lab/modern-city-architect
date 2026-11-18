@@ -22,10 +22,9 @@ public class RoadWandCommand {
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("roadwand")
                 .requires(source -> source.hasPermissionLevel(2))
-                .then(CommandManager.literal("give")
-                        .executes(RoadWandCommand::giveWand))
+                .then(CommandManager.literal("give").executes(RoadWandCommand::giveWand))
                 .then(CommandManager.argument("class", StringArgumentType.word())
-                        .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("highway", "avenue", "local"), b))
+                        .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("5", "7", "12", "8", "16"), b))
                         .then(CommandManager.argument("curve", StringArgumentType.word())
                                 .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("straight", "corner90", "scurve", "uturn"), b))
                                 .executes(RoadWandCommand::configureWand))));
@@ -34,7 +33,7 @@ public class RoadWandCommand {
     private static int giveWand(CommandContext<ServerCommandSource> context) {
         if (context.getSource().getEntity() instanceof ServerPlayerEntity player) {
             player.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
-            context.getSource().sendFeedback(() -> Text.literal("Given Smart Road Wand! Sneak+Right-Click to cycle class.")
+            context.getSource().sendFeedback(() -> Text.literal("Given Smart Road Wand! Shift+Right-Click in air for GUI.")
                     .formatted(Formatting.AQUA), false);
             return 1;
         }
@@ -48,9 +47,11 @@ public class RoadWandCommand {
 
             RoadWandItem.WandState state = RoadWandItem.getState(player.getUuid());
             state.roadClass = switch (cls) {
-                case "highway" -> RoadClass.HIGHWAY;
-                case "local" -> RoadClass.LOCAL;
-                default -> RoadClass.AVENUE;
+                case "5", "small" -> RoadClass.SMALL_5;
+                case "12", "large" -> RoadClass.LARGE_12;
+                case "8" -> RoadClass.HIGHWAY_8;
+                case "16", "highway" -> RoadClass.HIGHWAY_16;
+                default -> RoadClass.MEDIUM_7;
             };
             state.curveType = switch (crv) {
                 case "corner90" -> RoadNetworkManager.CurveType.CORNER90;
@@ -58,8 +59,7 @@ public class RoadWandCommand {
                 case "uturn" -> RoadNetworkManager.CurveType.UTURN;
                 default -> RoadNetworkManager.CurveType.STRAIGHT;
             };
-
-            context.getSource().sendFeedback(() -> Text.literal("Road Wand set to: " + state.roadClass.displayName
+            context.getSource().sendFeedback(() -> Text.literal("Road Wand: " + state.roadClass.displayName
                     + " | Curve: " + state.curveType.name()).formatted(Formatting.GREEN), false);
             return 1;
         }

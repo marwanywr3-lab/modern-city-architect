@@ -37,7 +37,8 @@ public class IntersectionBuilderJob implements StreamingBuilderEngine.BuildJob {
         this.center = center;
         this.type = type;
         this.roadClass = roadClass;
-        this.radius = (type == Type.ROUNDABOUT) ? (roadClass.halfWidth + 14) : (roadClass.halfWidth + 8);
+        int halfRoad = roadClass.roadWidth / 2 + 2;
+        this.radius = (type == Type.ROUNDABOUT) ? (halfRoad + 14) : (halfRoad + 8);
         this.size = radius * 2 + 1;
         this.totalBlocks = (long) size * size * 7;
 
@@ -92,7 +93,7 @@ public class IntersectionBuilderJob implements StreamingBuilderEngine.BuildJob {
     }
 
     private BlockState computeBlock(int rx, int y, int rz) {
-        int roadW = roadClass.halfWidth;
+        int roadW = roadClass.roadWidth / 2 + 1;
         int totalW = roadW + roadClass.sidewalkWidth;
 
         if (type == Type.ROUNDABOUT) {
@@ -108,8 +109,6 @@ public class IntersectionBuilderJob implements StreamingBuilderEngine.BuildJob {
                     return Blocks.GRASS_BLOCK.getDefaultState();
                 }
                 if (y == 1 && dist <= 1.2) return Blocks.SEA_LANTERN.getDefaultState();
-                if (y >= 1 && y <= 4 && rx == 4 && rz == 0) return Blocks.BIRCH_LOG.getDefaultState();
-                if (y == 5 && Math.abs(rx - 4) <= 1 && Math.abs(rz) <= 1) return Blocks.AZALEA_LEAVES.getDefaultState();
                 return Blocks.AIR.getDefaultState();
             }
 
@@ -132,19 +131,16 @@ public class IntersectionBuilderJob implements StreamingBuilderEngine.BuildJob {
             if (rz > totalW) inZArm = false;
             if (rz < 0 && (Math.abs(rx - rz) <= totalW || Math.abs(rx + rz) <= totalW)) inXArm = true;
         }
-
         if (!inXArm && !inZArm) return null;
 
         if (y == 0) {
             boolean onAsphalt = (inXArm && Math.abs(rz) <= roadW) || (inZArm && Math.abs(rx) <= roadW);
-            // Crosswalk zebra stripes near center box
             boolean onCrosswalk = onAsphalt && ((Math.abs(rx) == roadW + 2 && Math.abs(rz) % 2 == 0)
                     || (Math.abs(rz) == roadW + 2 && Math.abs(rx) % 2 == 0));
             if (onCrosswalk) return Blocks.WHITE_CONCRETE.getDefaultState();
             return onAsphalt ? Blocks.GRAY_CONCRETE.getDefaultState() : Blocks.SMOOTH_QUARTZ.getDefaultState();
         }
 
-        // Traffic light poles at the 4 corners of the intersection
         boolean isCorner = Math.abs(rx) == roadW + 1 && Math.abs(rz) == roadW + 1;
         if (isCorner) {
             if (y >= 1 && y <= 3) return Blocks.BLACK_CONCRETE.getDefaultState();
@@ -152,7 +148,6 @@ public class IntersectionBuilderJob implements StreamingBuilderEngine.BuildJob {
             if (y == 5) return Blocks.YELLOW_CONCRETE.getDefaultState();
             if (y == 6) return Blocks.LIME_CONCRETE.getDefaultState();
         }
-
         return Blocks.AIR.getDefaultState();
     }
 }

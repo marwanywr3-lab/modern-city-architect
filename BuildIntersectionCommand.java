@@ -25,7 +25,7 @@ public class BuildIntersectionCommand {
                 .then(CommandManager.argument("type", StringArgumentType.word())
                         .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("4way", "t", "y", "roundabout"), b))
                         .then(CommandManager.argument("class", StringArgumentType.word())
-                                .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("highway", "avenue", "local"), b))
+                                .suggests((ctx, b) -> CommandSource.suggestMatching(List.of("5", "7", "12", "16"), b))
                                 .executes(BuildIntersectionCommand::executeBuild))));
     }
 
@@ -42,9 +42,10 @@ public class BuildIntersectionCommand {
         };
 
         RoadClass roadClass = switch (classArg) {
-            case "highway" -> RoadClass.HIGHWAY;
-            case "local" -> RoadClass.LOCAL;
-            default -> RoadClass.AVENUE;
+            case "5", "small" -> RoadClass.SMALL_5;
+            case "12", "large" -> RoadClass.LARGE_12;
+            case "16", "highway" -> RoadClass.HIGHWAY_16;
+            default -> RoadClass.MEDIUM_7;
         };
 
         BlockPos center = BlockPos.ofFloored(source.getPosition());

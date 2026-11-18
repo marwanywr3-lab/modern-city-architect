@@ -24,6 +24,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 
 public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
 
@@ -33,20 +34,17 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
     }
 
     private void populateCatalog() {
-        // Row 1: Mega-Buildings & Skyline Towers
-        setEntry(10, Items.LIGHT_BLUE_STAINED_GLASS, "Build Modern Glass Mall (160x70, 3F)", Formatting.AQUA);
+        setEntry(10, Items.LIGHT_BLUE_STAINED_GLASS, "Build Modern Glass Mall (Front-Left Anchor)", Formatting.AQUA);
         setEntry(11, Items.QUARTZ_BLOCK, "Build Mid-Rise Tower (30b)", Formatting.WHITE);
         setEntry(12, Items.TINTED_GLASS, "Build High-Rise Tower (80b)", Formatting.BLUE);
         setEntry(13, Items.BEACON, "Build Supertall Skyscraper (120b)", Formatting.GOLD);
         setEntry(14, Items.WHITE_TERRACOTTA, "Build L-Shape Plaza (Retail, 4F)", Formatting.YELLOW);
         setEntry(15, Items.SMOOTH_QUARTZ, "Build U-Shape Plaza (Office, 5F)", Formatting.YELLOW);
 
-        // Row 2: Intersections & Overpasses
-        setEntry(19, Items.GRAY_CONCRETE, "Build 4-Way Avenue Intersection", Formatting.GREEN);
+        setEntry(19, Items.GRAY_CONCRETE, "Build 4-Way Medium Intersection", Formatting.GREEN);
         setEntry(20, Items.GRASS_BLOCK, "Build Green Roundabout", Formatting.GREEN);
         setEntry(21, Items.STONE_BRICK_WALL, "Build Elevated Overpass + Ramp", Formatting.AQUA);
 
-        // Row 3: Modern Facilities & Civic
         setEntry(28, Items.IRON_BLOCK, "Build Multi-Story Parking", Formatting.GRAY);
         setEntry(29, Items.RAIL, "Build Futuristic Metro Station", Formatting.AQUA);
         setEntry(30, Items.MINECART, "Build Glass Car Showroom", Formatting.BLUE);
@@ -55,8 +53,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
         setEntry(33, Items.SEA_LANTERN, "Build Modern Mosque", Formatting.GREEN);
         setEntry(34, Items.RED_CONCRETE, "Build Modern City Hospital", Formatting.RED);
 
-        // Row 4: Architect Tools
-        setEntry(40, Items.BLAZE_ROD, "Get Smart Road Wand", Formatting.GOLD);
+        setEntry(39, Items.BLAZE_ROD, "Get Smart Road Wand", Formatting.GOLD);
+        setEntry(40, Items.WOODEN_AXE, "Get Architect Volume Wand", Formatting.LIGHT_PURPLE);
         setEntry(41, Items.COMPASS, "Get City Controller", Formatting.AQUA);
         setEntry(42, Items.DIAMOND_SHOVEL, "Get Mega-Terraformer", Formatting.GREEN);
         setEntry(43, Items.PAPER, "Get Custom Blueprint Saver", Formatting.YELLOW);
@@ -72,26 +70,28 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
         if (player.getWorld().isClient() || !(player instanceof ServerPlayerEntity sp)) return;
         ServerWorld world = sp.getServerWorld();
-        BlockPos pos = sp.getBlockPos();
+        Direction facing = sp.getHorizontalFacing();
+        BlockPos anchor = sp.getBlockPos().offset(facing, 2);
 
         switch (slotIndex) {
-            case 10 -> StreamingBuilderEngine.enqueueJob(new MallBuilderJob(world, sp.getUuid(), pos.add(3, 0, -35), 160, 70, 3));
-            case 11 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), pos.add(3, 0, -11), TowerBuilderJob.Tier.MID));
-            case 12 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), pos.add(3, 0, -14), TowerBuilderJob.Tier.HIGH));
-            case 13 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), pos.add(3, 0, -17), TowerBuilderJob.Tier.SUPERTALL));
-            case 14 -> StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, sp.getUuid(), pos.add(3, 0, -24), PlazaBuilderJob.Shape.L, PlazaBuilderJob.Layout.RETAIL, 4));
-            case 15 -> StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, sp.getUuid(), pos.add(3, 0, -24), PlazaBuilderJob.Shape.U, PlazaBuilderJob.Layout.OFFICE, 5));
-            case 19 -> StreamingBuilderEngine.enqueueJob(new IntersectionBuilderJob(world, sp.getUuid(), pos, IntersectionBuilderJob.Type.FOUR_WAY, RoadClass.AVENUE));
-            case 20 -> StreamingBuilderEngine.enqueueJob(new IntersectionBuilderJob(world, sp.getUuid(), pos, IntersectionBuilderJob.Type.ROUNDABOUT, RoadClass.AVENUE));
-            case 21 -> StreamingBuilderEngine.enqueueJob(new OverpassBuilderJob(world, sp.getUuid(), pos));
-            case 28 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -13), FacilityBuilderJob.FacilityType.PARKING));
-            case 29 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -10), FacilityBuilderJob.FacilityType.METRO));
-            case 30 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -11), FacilityBuilderJob.FacilityType.SHOWROOM));
-            case 31 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -11), FacilityBuilderJob.FacilityType.GAS_STATION));
-            case 32 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -12), FacilityBuilderJob.FacilityType.VILLA));
-            case 33 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -15), FacilityBuilderJob.FacilityType.MOSQUE));
-            case 34 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), pos.add(3, 0, -17), FacilityBuilderJob.FacilityType.HOSPITAL));
-            case 40 -> sp.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
+            case 10 -> StreamingBuilderEngine.enqueueJob(new MallBuilderJob(world, sp.getUuid(), anchor, facing, 140, 64, 3));
+            case 11 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, TowerBuilderJob.Tier.MID));
+            case 12 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, TowerBuilderJob.Tier.HIGH));
+            case 13 -> StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, sp.getUuid(), anchor, TowerBuilderJob.Tier.SUPERTALL));
+            case 14 -> StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, sp.getUuid(), anchor, PlazaBuilderJob.Shape.L, PlazaBuilderJob.Layout.RETAIL, 4));
+            case 15 -> StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, sp.getUuid(), anchor, PlazaBuilderJob.Shape.U, PlazaBuilderJob.Layout.OFFICE, 5));
+            case 19 -> StreamingBuilderEngine.enqueueJob(new IntersectionBuilderJob(world, sp.getUuid(), sp.getBlockPos(), IntersectionBuilderJob.Type.FOUR_WAY, RoadClass.MEDIUM_7));
+            case 20 -> StreamingBuilderEngine.enqueueJob(new IntersectionBuilderJob(world, sp.getUuid(), sp.getBlockPos(), IntersectionBuilderJob.Type.ROUNDABOUT, RoadClass.MEDIUM_7));
+            case 21 -> StreamingBuilderEngine.enqueueJob(new OverpassBuilderJob(world, sp.getUuid(), sp.getBlockPos()));
+            case 28 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.PARKING));
+            case 29 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.METRO));
+            case 30 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.SHOWROOM));
+            case 31 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.GAS_STATION));
+            case 32 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.VILLA));
+            case 33 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.MOSQUE));
+            case 34 -> StreamingBuilderEngine.enqueueJob(new FacilityBuilderJob(world, sp.getUuid(), anchor, FacilityBuilderJob.FacilityType.HOSPITAL));
+            case 39 -> sp.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
+            case 40 -> sp.getInventory().insertStack(new ItemStack(ModItems.VOLUME_WAND));
             case 41 -> sp.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
             case 42 -> sp.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
             case 43 -> sp.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));

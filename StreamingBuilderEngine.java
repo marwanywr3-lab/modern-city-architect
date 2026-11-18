@@ -1,5 +1,6 @@
 package moderncity.engine;
 
+import moderncity.item.VolumeWandItem;
 import moderncity.road.RoadNetworkManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Block;
@@ -55,23 +56,22 @@ public class StreamingBuilderEngine {
 
     private static void onServerTick(MinecraftServer server) {
         tickCounter++;
+        if (tickCounter % 4 == 0) {
+            RoadNetworkManager.tickRoadPreview(server);
+            VolumeWandItem.tickWireframePreview(server);
+        }
         if (tickCounter % 100 == 0) {
             RoadNetworkManager.tickNightLighting(server);
         }
 
         if (currentJob == null) {
             currentJob = JOB_QUEUE.poll();
-            if (currentJob == null) {
-                return;
-            }
+            if (currentJob == null) return;
             sendToOwner(server, currentJob.getOwnerId(),
-                    Text.literal("Started building: " + currentJob.getName()).formatted(Formatting.AQUA),
-                    false);
+                    Text.literal("Started building: " + currentJob.getName()).formatted(Formatting.AQUA), false);
         }
 
-        long startTime = System.nanoTime();
-        long deadline = startTime + MAX_NANOS_PER_TICK;
-
+        long deadline = System.nanoTime() + MAX_NANOS_PER_TICK;
         currentJob.processBatch(MAX_BLOCKS_PER_TICK, deadline);
 
         if (tickCounter % 20 == 0 && !currentJob.isFinished()) {
@@ -80,21 +80,21 @@ public class StreamingBuilderEngine {
             int percent = (int) Math.min(99, (placed * 100L) / total);
             sendToOwner(server, currentJob.getOwnerId(),
                     Text.literal(String.format("Building %s: %d%% (%d / %d blocks)",
-                            currentJob.getName(), percent, placed, total)).formatted(Formatting.GREEN),
-                    true);
+                            currentJob.getName(), percent, placed, total)).formatted(Formatting.GREEN), true);
         }
 
         if (currentJob.isFinished()) {
             sendToOwner(server, currentJob.getOwnerId(),
                     Text.literal("Completed building: " + currentJob.getName() + "!")
-                            .formatted(Formatting.GOLD, Formatting.BOLD),
-                    false);
+                            .formatted(Formatting.GOLD, Formatting.BOLD), false);
             currentJob = null;
         }
     }
 
     public static void placeBlockFast(ServerWorld world, BlockPos pos, BlockState state) {
-        world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
+        if (pos.getY() >= world.getBottomY() && pos.getY() < world.getTopY()) {
+            world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
+        }
     }
 
     private static void sendToOwner(MinecraftServer server, UUID ownerId, Text message, boolean actionBar) {

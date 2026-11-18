@@ -1,17 +1,24 @@
 package moderncity.road;
 
 import moderncity.engine.StreamingBuilderEngine;
+import moderncity.item.ModItems;
+import moderncity.item.RoadWandItem;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.UUID;
 
 public class RoadNetworkManager {
 
@@ -19,10 +26,19 @@ public class RoadNetworkManager {
         STRAIGHT, CORNER90, SCURVE, UTURN
     }
 
+    public enum DirectionMode {
+        ONE_WAY("One-Way (Sidewalk Lamps)"),
+        TWO_WAY("Two-Way (Grass + Quartz Median)");
+
+        public final String label;
+        DirectionMode(String label) { this.label = label; }
+    }
+
     public record RoadSegmentRecord(
             BlockPos start,
             BlockPos end,
             RoadClass roadClass,
+            DirectionMode directionMode,
             CurveType curveType,
             List<BlockPos> placedPositions
     ) {}
@@ -75,33 +91,26 @@ public class RoadNetworkManager {
         return true;
     }
 
-    public static synchronized boolean upgradeLastRoad(ServerWorld world, java.util.UUID ownerId) {
+    public static synchronized boolean upgradeLastRoad(ServerWorld world, UUID ownerId) {
         if (ROAD_HISTORY.isEmpty()) return false;
         RoadSegmentRecord last = ROAD_HISTORY.peek();
-        RoadClass nextClass = switch (last.roadClass()) {
-            case LOCAL -> RoadClass.AVENUE;
-            case AVENUE -> RoadClass.HIGHWAY;
-            case HIGHWAY -> RoadClass.HIGHWAY;
-        };
-        if (nextClass == last.roadClass()) return false;
+        RoadClass nextClass = last.roadClass().next();
         StreamingBuilderEngine.enqueueJob(new RoadBuilderJob(
-                world, ownerId, last.start(), last.end(), nextClass, last.curveType()
+                world, ownerId, last.start(), last.end(), nextClass, last.directionMode(), last.curveType()
         ));
         return true;
     }
 
-    public static synchronized boolean repairLastRoad(ServerWorld world, java.util.UUID ownerId) {
+    public static synchronized boolean repairLastRoad(ServerWorld world, UUID ownerId) {
         if (ROAD_HISTORY.isEmpty()) return false;
         RoadSegmentRecord last = ROAD_HISTORY.peek();
         StreamingBuilderEngine.enqueueJob(new RoadBuilderJob(
-                world, ownerId, last.start(), last.end(), last.roadClass(), last.curveType()
+                world, ownerId, last.start(), last.end(), last.roadClass(), last.directionMode(), last.curveType()
         ));
         return true;
     }
 
-    public static boolean isAutoNightLighting() {
-        return autoNightLighting;
-    }
+    public static boolean isAutoNightLighting() { return autoNightLighting; }
 
     public static boolean toggleAutoNightLighting(MinecraftServer server) {
         autoNightLighting = !autoNightLighting;
@@ -136,6 +145,32 @@ public class RoadNetworkManager {
                 if (current.isOf(Blocks.REDSTONE_LAMP) || current.isOf(Blocks.SEA_LANTERN)) {
                     StreamingBuilderEngine.placeBlockFast(world, pos, lampState);
                 }
+            }
+        }
+    }
+
+    public static void tickRoadPreview(MinecraftServer server) {
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            if (!player.getMainHandStack().isOf(ModItems.ROAD_WAND)) continue;
+            RoadWandItem.WandState state = RoadWandItem.getState(player.getUuid());
+            if (state.firstPoint == null) continue;
+
+            HitResult hit = player.raycast(60.0, 0.0f, false);
+            BlockPos target = (hit.getType() == HitResult.Type.BLOCK)
+                    ? ((BlockHitResult) hit).getBlockPos()
+                    : BlockPos.ofFloored(hit.getPos());
+            target = autoSnap(target);
+
+            ServerWorld world = player.getServerWorld();
+            double dx = target.getX() - state.firstPoint.getX();
+            double dz = target.getZ() - state.firstPoint.getZ();
+            int steps = Math.max(4, (int) (Math.hypot(dx, dz) / 2.0));
+            for (int i = 0; i <= steps; i++) {
+                double t = (double) i / steps;
+                double px = state.firstPoint.getX() + dx * t + 0.5;
+                double py = state.firstPoint.getY() + 1.3;
+                double pz = state.firstPoint.getZ() + dz * t + 0.5;
+                world.spawnParticles(player, ParticleTypes.END_ROD, true, px, py, pz, 1, 0, 0, 0, 0);
             }
         }
     }

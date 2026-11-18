@@ -13,12 +13,15 @@ import moderncity.command.RoadWandCommand;
 import moderncity.command.TerraformCommand;
 import moderncity.engine.StreamingBuilderEngine;
 import moderncity.item.ModItems;
+import moderncity.item.VolumeWandItem;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +32,7 @@ public class ModernCityArchitect implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing Modern City Architect Mod v1.0.1...");
+        LOGGER.info("Initializing Modern City Architect Mod v2.0 (Pack A)...");
 
         ModItems.register();
         StreamingBuilderEngine.register();
@@ -48,22 +51,30 @@ public class ModernCityArchitect implements ModInitializer {
             CatalogCommand.register(dispatcher);
         });
 
-        // Give all Architect tools + English User Guide automatically on join if player doesn't have them
+        // Left-click unlocks Volume Wand end corner so player can extend it further
+        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+            if (!world.isClient() && player instanceof ServerPlayerEntity sp
+                    && sp.getMainHandStack().isOf(ModItems.VOLUME_WAND)) {
+                VolumeWandItem.unlockToDrag(sp);
+                return ActionResult.FAIL;
+            }
+            return ActionResult.PASS;
+        });
+
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
             if (!player.getInventory().contains(new ItemStack(ModItems.ARCHITECT_GUIDE))) {
                 player.getInventory().insertStack(new ItemStack(ModItems.VISUAL_CATALOG));
                 player.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
+                player.getInventory().insertStack(new ItemStack(ModItems.VOLUME_WAND));
                 player.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
                 player.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
                 player.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
                 player.getInventory().insertStack(new ItemStack(ModItems.ARCHITECT_GUIDE));
 
-                player.sendMessage(Text.literal("Welcome to Modern City Architect! Right-click the Visual City Catalog or Architect User Guide in your hotbar.")
+                player.sendMessage(Text.literal("Modern City Architect v2.0 Pack A ready! Check your hotbar.")
                         .formatted(Formatting.AQUA), false);
             }
         });
-
-        LOGGER.info("Modern City Architect Mod v1.0.1 initialized successfully!");
     }
 }
