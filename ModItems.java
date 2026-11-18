@@ -13,6 +13,12 @@ public class ModItems {
             new RoadWandItem(new Item.Settings().maxCount(1))
     );
 
+    public static final Item CITY_CONTROLLER = Registry.register(
+            Registries.ITEM,
+            Identifier.of(ModernCityArchitect.MOD_ID, "city_controller"),
+            new CityControllerItem(new Item.Settings().maxCount(1))
+    );
+
     public static void register() {
         ModernCityArchitect.LOGGER.info("Registered Modern City Architect items.");
     }

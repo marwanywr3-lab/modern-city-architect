@@ -1,8 +1,11 @@
 package moderncity;
 
+import moderncity.command.BuildIntersectionCommand;
 import moderncity.command.BuildMallCommand;
+import moderncity.command.BuildOverpassCommand;
 import moderncity.command.BuildPlazaCommand;
 import moderncity.command.BuildTowerCommand;
+import moderncity.command.CityControllerCommand;
 import moderncity.command.RoadWandCommand;
 import moderncity.engine.StreamingBuilderEngine;
 import moderncity.item.ModItems;
@@ -27,6 +30,9 @@ public class ModernCityArchitect implements ModInitializer {
             BuildTowerCommand.register(dispatcher);
             BuildPlazaCommand.register(dispatcher);
             RoadWandCommand.register(dispatcher);
+            BuildIntersectionCommand.register(dispatcher);
+            BuildOverpassCommand.register(dispatcher);
+            CityControllerCommand.register(dispatcher);
         });
 
         LOGGER.info("Modern City Architect Mod initialized successfully!");

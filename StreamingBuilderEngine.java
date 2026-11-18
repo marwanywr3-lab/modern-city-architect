@@ -1,5 +1,6 @@
 package moderncity.engine;
 
+import moderncity.road.RoadNetworkManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -53,6 +54,11 @@ public class StreamingBuilderEngine {
     }
 
     private static void onServerTick(MinecraftServer server) {
+        tickCounter++;
+        if (tickCounter % 100 == 0) {
+            RoadNetworkManager.tickNightLighting(server);
+        }
+
         if (currentJob == null) {
             currentJob = JOB_QUEUE.poll();
             if (currentJob == null) {
@@ -67,7 +73,6 @@ public class StreamingBuilderEngine {
         long deadline = startTime + MAX_NANOS_PER_TICK;
 
         currentJob.processBatch(MAX_BLOCKS_PER_TICK, deadline);
-        tickCounter++;
 
         if (tickCounter % 20 == 0 && !currentJob.isFinished()) {
             long placed = currentJob.getPlacedBlocks();

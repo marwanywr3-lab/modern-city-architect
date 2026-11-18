@@ -3,7 +3,9 @@ package moderncity.road;
 import moderncity.engine.StreamingBuilderEngine;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
     private final RoadClass roadClass;
     private final RoadNetworkManager.CurveType curveType;
     private final List<Placement> placements = new ArrayList<>();
+    private final List<BlockPos> recordedPositions = new ArrayList<>();
     private int cursor = 0;
 
     public RoadBuilderJob(ServerWorld world, UUID ownerId, BlockPos start, BlockPos end,
@@ -29,6 +32,14 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         this.curveType = curveType;
         generateRoad(start, end);
         RoadNetworkManager.registerEndpoints(start, end);
+        RoadNetworkManager.recordRoadSegment(new RoadNetworkManager.RoadSegmentRecord(
+                start, end, roadClass, curveType, recordedPositions
+        ));
+    }
+
+    private void addPlacement(BlockPos pos, BlockState state) {
+        placements.add(new Placement(pos, state));
+        recordedPositions.add(pos.toImmutable());
     }
 
     private void generateRoad(BlockPos start, BlockPos end) {
@@ -47,6 +58,12 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
             double perpX = -dz / len;
             double perpZ = dx / len;
 
+            // Detect water below (Bridge) or mountain above (Tunnel)
+            boolean isBridge = world.getFluidState(new BlockPos(c.getX(), baseY, c.getZ())).isIn(FluidTags.WATER)
+                    || world.getFluidState(new BlockPos(c.getX(), baseY - 1, c.getZ())).isIn(FluidTags.WATER);
+            boolean isTunnel = !isBridge && world.getBlockState(new BlockPos(c.getX(), baseY + 4, c.getZ())).isSolidBlock(
+                    world, new BlockPos(c.getX(), baseY + 4, c.getZ()));
+
             int totalHalf = roadClass.halfWidth + roadClass.sidewalkWidth;
             for (int offset = -totalHalf; offset <= totalHalf; offset++) {
                 int bx = (int) Math.round(c.getX() + perpX * offset);
@@ -55,11 +72,10 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
 
                 BlockState surface;
                 if (absOff <= roadClass.medianHalfWidth && roadClass != RoadClass.LOCAL) {
-                    surface = (roadClass == RoadClass.AVENUE)
+                    surface = (roadClass == RoadClass.AVENUE && !isBridge)
                             ? Blocks.GRASS_BLOCK.getDefaultState()
                             : Blocks.WHITE_CONCRETE.getDefaultState();
                 } else if (absOff <= roadClass.halfWidth) {
-                    // Asphalt with dashed white lane lines every 4 blocks
                     boolean isLaneDivider = (absOff == 4 || absOff == 8) && (i % 6 < 3);
                     surface = isLaneDivider ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.GRAY_CONCRETE.getDefaultState();
                 } else {
@@ -67,20 +83,54 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                 }
 
                 BlockPos groundPos = new BlockPos(bx, baseY, bz);
-                placements.add(new Placement(groundPos, surface));
-                // Clear 6 blocks above road
-                for (int clearY = 1; clearY <= 6; clearY++) {
-                    placements.add(new Placement(groundPos.up(clearY), Blocks.AIR.getDefaultState()));
-                }
+                addPlacement(groundPos, surface);
 
-                // Streetlights & Median Trees every 14 blocks
-                if (i % 14 == 0) {
-                    if (roadClass == RoadClass.HIGHWAY && offset == 0) {
-                        placeDoubleStreetlight(groundPos, 5);
-                    } else if (roadClass == RoadClass.AVENUE && offset == 0) {
-                        placePalmTree(groundPos);
-                    } else if (absOff == roadClass.halfWidth + 1 && (offset > 0 || roadClass == RoadClass.AVENUE)) {
-                        placeSingleStreetlight(groundPos, 4);
+                if (isBridge) {
+                    // Bridge underside & guardrails
+                    addPlacement(groundPos.down(), Blocks.WHITE_CONCRETE.getDefaultState());
+                    if (absOff == totalHalf) {
+                        addPlacement(groundPos.up(), Blocks.STONE_BRICK_WALL.getDefaultState());
+                    } else {
+                        for (int clearY = 1; clearY <= 5; clearY++) {
+                            addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
+                        }
+                    }
+                    // Concrete pillars down to seabed every 12 blocks
+                    if (i % 12 == 0 && (absOff == roadClass.halfWidth || offset == 0)) {
+                        for (int py = 2; py <= 24; py++) {
+                            BlockPos pillarPos = groundPos.down(py);
+                            if (world.getBlockState(pillarPos).isSolidBlock(world, pillarPos)) break;
+                            addPlacement(pillarPos, Blocks.GRAY_CONCRETE.getDefaultState());
+                        }
+                    }
+                } else if (isTunnel) {
+                    // Illuminated concrete tunnel inside mountains
+                    for (int clearY = 1; clearY <= 5; clearY++) {
+                        if (absOff == totalHalf) {
+                            addPlacement(groundPos.up(clearY), Blocks.WHITE_CONCRETE.getDefaultState());
+                        } else {
+                            addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
+                        }
+                    }
+                    // Tunnel ceiling & recessed lights
+                    BlockPos roofPos = groundPos.up(6);
+                    if (offset == 0 && i % 6 == 0) {
+                        addPlacement(roofPos, Blocks.SEA_LANTERN.getDefaultState());
+                    } else {
+                        addPlacement(roofPos, Blocks.WHITE_CONCRETE.getDefaultState());
+                    }
+                } else {
+                    for (int clearY = 1; clearY <= 6; clearY++) {
+                        addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
+                    }
+                    if (i % 14 == 0) {
+                        if (roadClass == RoadClass.HIGHWAY && offset == 0) {
+                            placeDoubleStreetlight(groundPos, 5);
+                        } else if (roadClass == RoadClass.AVENUE && offset == 0) {
+                            placePalmTree(groundPos);
+                        } else if (absOff == roadClass.halfWidth + 1 && (offset > 0 || roadClass == RoadClass.AVENUE)) {
+                            placeSingleStreetlight(groundPos, 4);
+                        }
                     }
                 }
             }
@@ -89,29 +139,36 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
 
     private void placeDoubleStreetlight(BlockPos base, int height) {
         for (int h = 1; h <= height; h++) {
-            placements.add(new Placement(base.up(h), Blocks.IRON_BARS.getDefaultState()));
+            addPlacement(base.up(h), Blocks.IRON_BARS.getDefaultState());
         }
-        placements.add(new Placement(base.up(height).east(), Blocks.SEA_LANTERN.getDefaultState()));
-        placements.add(new Placement(base.up(height).west(), Blocks.SEA_LANTERN.getDefaultState()));
+        BlockState lamp = Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, true);
+        BlockPos p1 = base.up(height).east();
+        BlockPos p2 = base.up(height).west();
+        addPlacement(p1, lamp);
+        addPlacement(p2, lamp);
+        RoadNetworkManager.registerStreetLamp(p1);
+        RoadNetworkManager.registerStreetLamp(p2);
     }
 
     private void placeSingleStreetlight(BlockPos base, int height) {
         for (int h = 1; h <= height; h++) {
-            placements.add(new Placement(base.up(h), Blocks.IRON_BARS.getDefaultState()));
+            addPlacement(base.up(h), Blocks.IRON_BARS.getDefaultState());
         }
-        placements.add(new Placement(base.up(height + 1), Blocks.SEA_LANTERN.getDefaultState()));
+        BlockPos lampPos = base.up(height + 1);
+        addPlacement(lampPos, Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, true));
+        RoadNetworkManager.registerStreetLamp(lampPos);
     }
 
     private void placePalmTree(BlockPos base) {
         for (int h = 1; h <= 4; h++) {
-            placements.add(new Placement(base.up(h), Blocks.BIRCH_LOG.getDefaultState()));
+            addPlacement(base.up(h), Blocks.BIRCH_LOG.getDefaultState());
         }
         BlockPos top = base.up(5);
-        placements.add(new Placement(top, Blocks.AZALEA_LEAVES.getDefaultState()));
-        placements.add(new Placement(top.north(), Blocks.AZALEA_LEAVES.getDefaultState()));
-        placements.add(new Placement(top.south(), Blocks.AZALEA_LEAVES.getDefaultState()));
-        placements.add(new Placement(top.east(), Blocks.AZALEA_LEAVES.getDefaultState()));
-        placements.add(new Placement(top.west(), Blocks.AZALEA_LEAVES.getDefaultState()));
+        addPlacement(top, Blocks.AZALEA_LEAVES.getDefaultState());
+        addPlacement(top.north(), Blocks.AZALEA_LEAVES.getDefaultState());
+        addPlacement(top.south(), Blocks.AZALEA_LEAVES.getDefaultState());
+        addPlacement(top.east(), Blocks.AZALEA_LEAVES.getDefaultState());
+        addPlacement(top.west(), Blocks.AZALEA_LEAVES.getDefaultState());
     }
 
     private List<BlockPos> sampleCenterline(BlockPos start, BlockPos end) {
