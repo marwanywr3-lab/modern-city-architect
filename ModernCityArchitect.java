@@ -1,12 +1,16 @@
 package moderncity;
 
+import moderncity.command.BlueprintCommand;
+import moderncity.command.BuildFacilityCommand;
 import moderncity.command.BuildIntersectionCommand;
 import moderncity.command.BuildMallCommand;
 import moderncity.command.BuildOverpassCommand;
 import moderncity.command.BuildPlazaCommand;
 import moderncity.command.BuildTowerCommand;
+import moderncity.command.CatalogCommand;
 import moderncity.command.CityControllerCommand;
 import moderncity.command.RoadWandCommand;
+import moderncity.command.TerraformCommand;
 import moderncity.engine.StreamingBuilderEngine;
 import moderncity.item.ModItems;
 import net.fabricmc.api.ModInitializer;
@@ -20,7 +24,7 @@ public class ModernCityArchitect implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing Modern City Architect Mod...");
+        LOGGER.info("Initializing Modern City Architect Mod v1.0.0...");
 
         ModItems.register();
         StreamingBuilderEngine.register();
@@ -33,8 +37,12 @@ public class ModernCityArchitect implements ModInitializer {
             BuildIntersectionCommand.register(dispatcher);
             BuildOverpassCommand.register(dispatcher);
             CityControllerCommand.register(dispatcher);
+            BuildFacilityCommand.register(dispatcher);
+            TerraformCommand.register(dispatcher);
+            BlueprintCommand.register(dispatcher);
+            CatalogCommand.register(dispatcher);
         });
 
-        LOGGER.info("Modern City Architect Mod initialized successfully!");
+        LOGGER.info("Modern City Architect Mod v1.0.0 initialized successfully!");
     }
 }
