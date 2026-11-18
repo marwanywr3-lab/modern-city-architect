@@ -3,6 +3,7 @@ package moderncity.gui;
 import moderncity.builder.ApartmentTowerJob;
 import moderncity.builder.CompoundBuilderJob;
 import moderncity.builder.FacilityBuilderJob;
+import moderncity.builder.HotelBuilderJob;
 import moderncity.builder.IntersectionBuilderJob;
 import moderncity.builder.MallBuilderJob;
 import moderncity.builder.OverpassBuilderJob;
@@ -70,6 +71,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
         setEntry(41, Items.COMPASS, "Get City Controller", Formatting.AQUA);
         setEntry(42, Items.DIAMOND_SHOVEL, "Get Mega-Terraformer", Formatting.GREEN);
         setEntry(43, Items.PAPER, "Get Custom Blueprint Saver", Formatting.YELLOW);
+        setEntry(44, Items.MAGENTA_BED, "Build Grand Hotel (80x50x46)", Formatting.LIGHT_PURPLE);
+        setEntry(49, Items.BARRIER, "GLOBAL UNDO (Last Build/Road)", Formatting.RED);
     }
 
     private void setEntry(int slot, Item item, String label, Formatting color) {
@@ -113,6 +116,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
             case 41 -> sp.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
             case 42 -> sp.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
             case 43 -> sp.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
+            case 44 -> StreamingBuilderEngine.enqueueJob(new HotelBuilderJob(world, sp.getUuid(), anchor, facing, 80, 50, 46));
+            case 49 -> StreamingBuilderEngine.triggerGlobalUndo(sp.getUuid());
             default -> { return; }
         }
         sp.closeHandledScreen();

@@ -24,7 +24,7 @@ public class CityControllerScreenHandler extends GenericContainerScreenHandler {
 
     private void populateButtons() {
         setButton(10, Items.DIAMOND_PICKAXE, "Upgrade Last Road Class", Formatting.AQUA);
-        setButton(11, Items.BARRIER, "Undo Last Road", Formatting.RED);
+        setButton(11, Items.BARRIER, "Global Undo (Any Building / Road)", Formatting.RED);
         setButton(12, Items.ANVIL, "Repair Last Road", Formatting.GREEN);
 
         boolean lit = RoadNetworkManager.isManualLitState();
@@ -57,8 +57,8 @@ public class CityControllerScreenHandler extends GenericContainerScreenHandler {
                 serverPlayer.closeHandledScreen();
             }
             case 11 -> {
-                boolean ok = RoadNetworkManager.undoLastRoad(world);
-                serverPlayer.sendMessage(Text.literal(ok ? "Undid last road segment." : "No road to undo.")
+                boolean ok = moderncity.engine.StreamingBuilderEngine.triggerGlobalUndo(serverPlayer.getUuid());
+                serverPlayer.sendMessage(Text.literal(ok ? "Global Undo started! Restoring..." : "Nothing to undo.")
                         .formatted(ok ? Formatting.YELLOW : Formatting.RED), false);
                 serverPlayer.closeHandledScreen();
             }

@@ -4,7 +4,9 @@ import moderncity.command.BlueprintCommand;
 import moderncity.command.BuildCompoundCommand;
 import moderncity.command.BuildDistrictCommand;
 import moderncity.command.BuildOceanCommand;
+import moderncity.command.BuildHotelCommand;
 import moderncity.command.DroneCommand;
+import moderncity.command.UndoCommand;
 import moderncity.command.BuildFacilityCommand;
 import moderncity.command.BuildIntersectionCommand;
 import moderncity.command.BuildMallCommand;
@@ -58,6 +60,8 @@ public class ModernCityArchitect implements ModInitializer {
             BuildCompoundCommand.register(dispatcher);
             BuildOceanCommand.register(dispatcher);
             DroneCommand.register(dispatcher);
+            BuildHotelCommand.register(dispatcher);
+            UndoCommand.register(dispatcher);
             BuildDistrictCommand.register(dispatcher);
         });
 

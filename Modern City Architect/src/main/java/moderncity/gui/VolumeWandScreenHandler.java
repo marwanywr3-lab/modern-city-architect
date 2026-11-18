@@ -39,6 +39,7 @@ public class VolumeWandScreenHandler extends GenericContainerScreenHandler {
         setBtn(22, Items.TINTED_GLASS, "Block: Tinted Glass", Formatting.BLUE);
         setBtn(23, Items.WHITE_TERRACOTTA, "Block: Warm Terracotta", Formatting.YELLOW);
         setBtn(24, Items.BIRCH_PLANKS, "Block: Light Birch Wood", Formatting.YELLOW);
+        setBtn(25, Items.GLASS_BOTTLE, "Block: AIR (Erase / Carve)", Formatting.AQUA);
 
         // Actions
         setBtn(30, Items.BARRIER, "Undo Last Volume Build", Formatting.RED);
@@ -68,6 +69,7 @@ public class VolumeWandScreenHandler extends GenericContainerScreenHandler {
             case 22 -> state.selectedBlock = Blocks.TINTED_GLASS.getDefaultState();
             case 23 -> state.selectedBlock = Blocks.WHITE_TERRACOTTA.getDefaultState();
             case 24 -> state.selectedBlock = Blocks.BIRCH_PLANKS.getDefaultState();
+            case 25 -> state.selectedBlock = Blocks.AIR.getDefaultState();
             case 30 -> { VolumeWandItem.undoLast(sp); sp.closeHandledScreen(); return; }
             case 32 -> {
                 state.stage = VolumeWandItem.Stage.IDLE;
