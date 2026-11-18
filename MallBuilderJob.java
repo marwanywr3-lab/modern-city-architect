@@ -21,17 +21,17 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
     private final UUID ownerId;
     private final BlockPos frontLeftAnchor;
     private final Direction facing;
-    private final int length; // forward (+forward)
-    private final int width;  // right (+right)
+    private final int length;
+    private final int width;
     private final int floors;
 
     private final int totalHeight;
     private final int atriumHalfWidth;
     private final long totalBlocks;
 
-    private int curF = 0; // forward (0..length-1)
+    private int curF = 0;
     private int curY = 0;
-    private int curR = 0; // right (0..width-1)
+    private int curR = 0;
     private long placedBlocks = 0;
     private boolean finished = false;
 
@@ -105,13 +105,11 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
         int distFromCenterZ = Math.abs(z - centerZ);
         int mallMainTopY = floors * FLOOR_HEIGHT;
 
-        // 1. Fully Closed Vaulted Glass Roof above concourse + Closed Roof Deck over wings
         if (y > mallMainTopY) {
             if (distFromCenterZ <= atriumHalfWidth + 1) {
                 int archHeight = Math.max(5, atriumHalfWidth / 2 + 2);
                 double norm = (double) distFromCenterZ / (atriumHalfWidth + 1);
                 int targetRoofY = mallMainTopY + (int) Math.round(archHeight * Math.sqrt(Math.max(0.0, 1.0 - norm * norm)));
-
                 if (y == targetRoofY) {
                     if (x % 10 == 0 || x == 0 || x == length - 1) return Blocks.WHITE_CONCRETE.getDefaultState();
                     if (distFromCenterZ <= 1 && x % 8 == 4) return Blocks.SEA_LANTERN.getDefaultState();
@@ -123,32 +121,21 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
             return Blocks.AIR.getDefaultState();
         }
 
-        // Closed roof slab at mallMainTopY
         if (y == mallMainTopY) {
-            if (distFromCenterZ <= atriumHalfWidth) {
-                return Blocks.AIR.getDefaultState(); // Directly covered by vaulted glass arch above
-            }
+            if (distFromCenterZ <= atriumHalfWidth) return Blocks.AIR.getDefaultState();
             if (x == 0 || x == length - 1 || z == 0 || z == width - 1) return Blocks.WHITE_CONCRETE.getDefaultState();
-            return (x % 6 == 0 && z % 6 == 0)
-                    ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState()
-                    : Blocks.WHITE_CONCRETE.getDefaultState();
+            return (x % 6 == 0 && z % 6 == 0) ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState() : Blocks.WHITE_CONCRETE.getDefaultState();
         }
 
         int floorIndex = Math.min(floors - 1, y / FLOOR_HEIGHT);
         int localY = y % FLOOR_HEIGHT;
 
-        // 2. Exterior Perimeter & Grand Entrances
         boolean isOuterX = (x == 0 || x == length - 1);
         boolean isOuterZ = (z == 0 || z == width - 1);
         if (isOuterX || isOuterZ) {
             if (isOuterX && distFromCenterZ <= atriumHalfWidth) {
-                // Grand Entrance Opening (6 blocks wide, 4 blocks tall) + Canopy
-                if (floorIndex == 0 && localY >= 1 && localY <= 4 && distFromCenterZ <= 4) {
-                    return Blocks.AIR.getDefaultState();
-                }
-                if (floorIndex == 0 && localY == 5 && distFromCenterZ <= 5) {
-                    return Blocks.SEA_LANTERN.getDefaultState();
-                }
+                if (floorIndex == 0 && localY >= 1 && localY <= 4 && distFromCenterZ <= 4) return Blocks.AIR.getDefaultState();
+                if (floorIndex == 0 && localY == 5 && distFromCenterZ <= 5) return Blocks.SEA_LANTERN.getDefaultState();
                 if (localY == 0) return Blocks.SMOOTH_QUARTZ.getDefaultState();
                 if (localY == 5) return Blocks.WHITE_CONCRETE.getDefaultState();
                 return Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
@@ -160,7 +147,25 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
             return Blocks.TINTED_GLASS.getDefaultState();
         }
 
-        // Plaza fountain spacing every 200 blocks
+        // Flush Staircase System:
+        // Steps at xCycle 10..15 (6 steps): step s has stair block at floorBase + s + 1.
+        // Top step (s=5) sits flush at floorBase + 6 (the upper floor's slab!).
+        int xCycle = x % 80;
+        boolean inStairLane = (distFromCenterZ >= atriumHalfWidth - 2 && distFromCenterZ <= atriumHalfWidth - 1);
+        if (inStairLane && xCycle >= 10 && xCycle <= 15) {
+            int s = xCycle - 10; // 0..5
+            for (int f = 0; f < floors - 1; f++) {
+                int stairY = f * FLOOR_HEIGHT + s + 1;
+                if (y == stairY) {
+                    return Blocks.SMOOTH_QUARTZ_STAIRS.getDefaultState()
+                            .with(StairsBlock.FACING, PlacementUtil.rotateDir(facing, Direction.NORTH));
+                }
+                if (y > stairY && y <= stairY + 4) {
+                    return Blocks.AIR.getDefaultState(); // Guaranteed 4 blocks of headroom!
+                }
+            }
+        }
+
         int plazaSpacing = 200;
         boolean inPlazaX;
         int plazaLocalX;
@@ -175,10 +180,6 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
             inPlazaX = plazaLocalX <= 7;
         }
 
-        // 3. Floor Slabs & Real Staircase Headroom Cutouts
-        boolean inStairFootprint = (distFromCenterZ >= atriumHalfWidth - 2 && distFromCenterZ <= atriumHalfWidth - 1)
-                && (x % 80 >= 10 && x % 80 <= 16);
-
         if (localY == 0) {
             if (floorIndex == 0) {
                 if (inPlazaX && distFromCenterZ <= 5) {
@@ -192,7 +193,6 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
                 }
                 return Blocks.BIRCH_PLANKS.getDefaultState();
             } else {
-                if (inStairFootprint) return Blocks.AIR.getDefaultState(); // Open stairwell headroom!
                 if (distFromCenterZ <= atriumHalfWidth - 3) return Blocks.AIR.getDefaultState();
                 if (distFromCenterZ <= atriumHalfWidth) {
                     return (x % 8 == 0 && distFromCenterZ == atriumHalfWidth - 1)
@@ -203,17 +203,6 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
             }
         }
 
-        // 4. Proper Oriented Staircases connecting floors cleanly
-        if (floorIndex < floors - 1 && inStairFootprint) {
-            int step = (x % 80) - 10;
-            if (step >= 0 && step <= 5 && localY == step + 1) {
-                return Blocks.SMOOTH_QUARTZ_STAIRS.getDefaultState()
-                        .with(StairsBlock.FACING, PlacementUtil.rotateDir(facing, Direction.NORTH));
-            }
-            return Blocks.AIR.getDefaultState();
-        }
-
-        // 5. Fountains
         if (floorIndex == 0 && inPlazaX && distFromCenterZ <= 5) {
             int r = Math.max(plazaLocalX, distFromCenterZ);
             if (localY == 1) {
@@ -227,14 +216,12 @@ public class MallBuilderJob implements StreamingBuilderEngine.BuildJob {
             if (localY == 3 && r == 0) return Blocks.WATER.getDefaultState();
         }
 
-        // 6. Mezzanine Railings
         if (floorIndex > 0 && localY == 1 && distFromCenterZ == atriumHalfWidth - 3) {
             return Blocks.GRAY_STAINED_GLASS_PANE.getDefaultState();
         }
 
         if (distFromCenterZ <= atriumHalfWidth) return Blocks.AIR.getDefaultState();
 
-        // 7. Divided Retail Wings
         int distIntoWing = distFromCenterZ - (atriumHalfWidth + 1);
         if (distIntoWing == 0) {
             int shopLocalX = x % SHOP_WIDTH;

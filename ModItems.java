@@ -19,6 +19,10 @@ public class ModItems {
             Registries.ITEM, Identifier.of(ModernCityArchitect.MOD_ID, "volume_wand"),
             new VolumeWandItem(new Item.Settings().maxCount(1)));
 
+    public static final Item CORPORATE_HQ_TOOL = Registry.register(
+            Registries.ITEM, Identifier.of(ModernCityArchitect.MOD_ID, "corporate_hq_tool"),
+            new CorporateHQItem(new Item.Settings().maxCount(1)));
+
     public static final Item CITY_CONTROLLER = Registry.register(
             Registries.ITEM, Identifier.of(ModernCityArchitect.MOD_ID, "city_controller"),
             new CityControllerItem(new Item.Settings().maxCount(1)));
@@ -49,6 +53,7 @@ public class ModItems {
                         entries.add(VISUAL_CATALOG);
                         entries.add(ROAD_WAND);
                         entries.add(VOLUME_WAND);
+                        entries.add(CORPORATE_HQ_TOOL);
                         entries.add(CITY_CONTROLLER);
                         entries.add(MEGA_TERRAFORMER);
                         entries.add(BLUEPRINT_SAVER);

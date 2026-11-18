@@ -24,9 +24,18 @@ public class CityControllerScreenHandler extends GenericContainerScreenHandler {
 
     private void populateButtons() {
         setButton(10, Items.DIAMOND_PICKAXE, "Upgrade Last Road Class", Formatting.AQUA);
-        setButton(12, Items.BARRIER, "Undo Last Road", Formatting.RED);
-        setButton(14, Items.ANVIL, "Repair Last Road", Formatting.GREEN);
-        setButton(16, Items.REDSTONE_LAMP, "Toggle Auto Night Lighting", Formatting.GOLD);
+        setButton(11, Items.BARRIER, "Undo Last Road", Formatting.RED);
+        setButton(12, Items.ANVIL, "Repair Last Road", Formatting.GREEN);
+
+        boolean lit = RoadNetworkManager.isManualLitState();
+        setButton(14, lit ? Items.SEA_LANTERN : Items.REDSTONE_LAMP,
+                "Streetlights: " + (lit ? "ON (Click to Turn OFF)" : "OFF (Click to Turn ON)"),
+                lit ? Formatting.GOLD : Formatting.GRAY);
+
+        boolean auto = RoadNetworkManager.isAutoNightLighting();
+        setButton(16, Items.CLOCK,
+                "Auto Night Sensor: " + (auto ? "ON" : "OFF"),
+                auto ? Formatting.GREEN : Formatting.YELLOW);
     }
 
     private void setButton(int slot, net.minecraft.item.Item item, String title, Formatting color) {
@@ -37,8 +46,7 @@ public class CityControllerScreenHandler extends GenericContainerScreenHandler {
 
     @Override
     public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
-        if (player.getWorld().isClient()) return;
-        if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
+        if (player.getWorld().isClient() || !(player instanceof ServerPlayerEntity serverPlayer)) return;
         ServerWorld world = serverPlayer.getServerWorld();
 
         switch (slotIndex) {
@@ -48,26 +56,31 @@ public class CityControllerScreenHandler extends GenericContainerScreenHandler {
                         .formatted(ok ? Formatting.AQUA : Formatting.YELLOW), false);
                 serverPlayer.closeHandledScreen();
             }
-            case 12 -> {
+            case 11 -> {
                 boolean ok = RoadNetworkManager.undoLastRoad(world);
                 serverPlayer.sendMessage(Text.literal(ok ? "Undid last road segment." : "No road to undo.")
                         .formatted(ok ? Formatting.YELLOW : Formatting.RED), false);
                 serverPlayer.closeHandledScreen();
             }
-            case 14 -> {
+            case 12 -> {
                 boolean ok = RoadNetworkManager.repairLastRoad(world, serverPlayer.getUuid());
                 serverPlayer.sendMessage(Text.literal(ok ? "Repairing last road..." : "No road to repair.")
                         .formatted(ok ? Formatting.GREEN : Formatting.YELLOW), false);
                 serverPlayer.closeHandledScreen();
             }
+            case 14 -> {
+                boolean nowLit = RoadNetworkManager.toggleManualLights(serverPlayer.getServer());
+                serverPlayer.sendMessage(Text.literal("City Streetlights: " + (nowLit ? "ON" : "OFF"))
+                        .formatted(nowLit ? Formatting.GOLD : Formatting.GRAY), true);
+                populateButtons();
+            }
             case 16 -> {
                 boolean enabled = RoadNetworkManager.toggleAutoNightLighting(serverPlayer.getServer());
-                serverPlayer.sendMessage(Text.literal("Auto Night Lighting: " + (enabled ? "ON" : "OFF"))
-                        .formatted(enabled ? Formatting.GREEN : Formatting.GRAY), false);
-                serverPlayer.closeHandledScreen();
+                serverPlayer.sendMessage(Text.literal("Auto Night Sensor: " + (enabled ? "ON" : "OFF"))
+                        .formatted(enabled ? Formatting.GREEN : Formatting.YELLOW), true);
+                populateButtons();
             }
             default -> {
-                // Prevent taking decorative GUI items
             }
         }
     }

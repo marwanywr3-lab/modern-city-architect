@@ -1,6 +1,7 @@
 package moderncity;
 
 import moderncity.command.BlueprintCommand;
+import moderncity.command.BuildCompoundCommand;
 import moderncity.command.BuildFacilityCommand;
 import moderncity.command.BuildIntersectionCommand;
 import moderncity.command.BuildMallCommand;
@@ -9,6 +10,7 @@ import moderncity.command.BuildPlazaCommand;
 import moderncity.command.BuildTowerCommand;
 import moderncity.command.CatalogCommand;
 import moderncity.command.CityControllerCommand;
+import moderncity.command.CompanyHQCommand;
 import moderncity.command.RoadWandCommand;
 import moderncity.command.TerraformCommand;
 import moderncity.engine.StreamingBuilderEngine;
@@ -32,7 +34,7 @@ public class ModernCityArchitect implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing Modern City Architect Mod v2.0 (Pack A)...");
+        LOGGER.info("Initializing Modern City Architect Mod v2.0...");
 
         ModItems.register();
         StreamingBuilderEngine.register();
@@ -49,9 +51,10 @@ public class ModernCityArchitect implements ModInitializer {
             TerraformCommand.register(dispatcher);
             BlueprintCommand.register(dispatcher);
             CatalogCommand.register(dispatcher);
+            CompanyHQCommand.register(dispatcher);
+            BuildCompoundCommand.register(dispatcher);
         });
 
-        // Left-click unlocks Volume Wand end corner so player can extend it further
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
             if (!world.isClient() && player instanceof ServerPlayerEntity sp
                     && sp.getMainHandStack().isOf(ModItems.VOLUME_WAND)) {
@@ -67,12 +70,13 @@ public class ModernCityArchitect implements ModInitializer {
                 player.getInventory().insertStack(new ItemStack(ModItems.VISUAL_CATALOG));
                 player.getInventory().insertStack(new ItemStack(ModItems.ROAD_WAND));
                 player.getInventory().insertStack(new ItemStack(ModItems.VOLUME_WAND));
+                player.getInventory().insertStack(new ItemStack(ModItems.CORPORATE_HQ_TOOL));
                 player.getInventory().insertStack(new ItemStack(ModItems.CITY_CONTROLLER));
                 player.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
                 player.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
                 player.getInventory().insertStack(new ItemStack(ModItems.ARCHITECT_GUIDE));
 
-                player.sendMessage(Text.literal("Modern City Architect v2.0 Pack A ready! Check your hotbar.")
+                player.sendMessage(Text.literal("Modern City Architect v2.0 ready! Check your hotbar & English Guide.")
                         .formatted(Formatting.AQUA), false);
             }
         });

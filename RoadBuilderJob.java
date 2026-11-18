@@ -9,7 +9,9 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
@@ -22,7 +24,8 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
     private final RoadNetworkManager.DirectionMode directionMode;
     private final RoadNetworkManager.CurveType curveType;
     private final List<Placement> placements = new ArrayList<>();
-    private final List<BlockPos> recordedPositions = new ArrayList<>();
+    private final List<RoadNetworkManager.UndoEntry> undoEntries = new ArrayList<>();
+    private final Set<BlockPos> recordedSet = new HashSet<>();
     private int cursor = 0;
 
     public RoadBuilderJob(ServerWorld world, UUID ownerId, BlockPos start, BlockPos end,
@@ -36,13 +39,16 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         generateRoad(start, end);
         RoadNetworkManager.registerEndpoints(start, end);
         RoadNetworkManager.recordRoadSegment(new RoadNetworkManager.RoadSegmentRecord(
-                start, end, roadClass, directionMode, curveType, recordedPositions
+                start, end, roadClass, directionMode, curveType, undoEntries
         ));
     }
 
     private void addPlacement(BlockPos pos, BlockState state) {
-        placements.add(new Placement(pos, state));
-        recordedPositions.add(pos.toImmutable());
+        BlockPos imm = pos.toImmutable();
+        if (recordedSet.add(imm)) {
+            undoEntries.add(new RoadNetworkManager.UndoEntry(imm, world.getBlockState(imm)));
+        }
+        placements.add(new Placement(imm, state));
     }
 
     private void generateRoad(BlockPos start, BlockPos end) {
@@ -164,7 +170,7 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         for (int h = 1; h <= height; h++) {
             addPlacement(base.up(h), Blocks.IRON_BARS.getDefaultState());
         }
-        BlockState lamp = Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, true);
+        BlockState lamp = RoadNetworkManager.isManualLitState() ? Blocks.SEA_LANTERN.getDefaultState() : Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, false);
         if (doubleHead) {
             BlockPos p1 = base.up(height).east();
             BlockPos p2 = base.up(height).west();

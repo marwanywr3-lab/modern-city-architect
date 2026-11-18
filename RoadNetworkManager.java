@@ -34,13 +34,15 @@ public class RoadNetworkManager {
         DirectionMode(String label) { this.label = label; }
     }
 
+    public record UndoEntry(BlockPos pos, BlockState previousState) {}
+
     public record RoadSegmentRecord(
             BlockPos start,
             BlockPos end,
             RoadClass roadClass,
             DirectionMode directionMode,
             CurveType curveType,
-            List<BlockPos> placedPositions
+            List<UndoEntry> undoEntries
     ) {}
 
     private static final double SNAP_RADIUS_SQ = 64.0;
@@ -48,8 +50,9 @@ public class RoadNetworkManager {
     private static final Deque<RoadSegmentRecord> ROAD_HISTORY = new ArrayDeque<>();
     private static final List<BlockPos> STREET_LAMPS = new ArrayList<>();
 
-    private static boolean autoNightLighting = true;
-    private static Boolean lastLitState = null;
+    private static boolean autoNightLighting = false;
+    private static boolean manualLitState = true;
+    private static Boolean lastAppliedLit = null;
 
     public static synchronized BlockPos autoSnap(BlockPos target) {
         BlockPos best = target;
@@ -85,8 +88,10 @@ public class RoadNetworkManager {
     public static synchronized boolean undoLastRoad(ServerWorld world) {
         if (ROAD_HISTORY.isEmpty()) return false;
         RoadSegmentRecord last = ROAD_HISTORY.pop();
-        for (BlockPos pos : last.placedPositions()) {
-            StreamingBuilderEngine.placeBlockFast(world, pos, Blocks.AIR.getDefaultState());
+        List<UndoEntry> entries = last.undoEntries();
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            UndoEntry e = entries.get(i);
+            StreamingBuilderEngine.placeBlockFast(world, e.pos(), e.previousState());
         }
         return true;
     }
@@ -111,18 +116,33 @@ public class RoadNetworkManager {
     }
 
     public static boolean isAutoNightLighting() { return autoNightLighting; }
+    public static boolean isManualLitState() { return manualLitState; }
+
+    public static boolean toggleManualLights(MinecraftServer server) {
+        autoNightLighting = false;
+        manualLitState = !manualLitState;
+        applyLampState(server.getOverworld(), manualLitState);
+        lastAppliedLit = manualLitState;
+        return manualLitState;
+    }
 
     public static boolean toggleAutoNightLighting(MinecraftServer server) {
         autoNightLighting = !autoNightLighting;
-        lastLitState = null;
-        tickNightLighting(server);
+        lastAppliedLit = null;
+        if (autoNightLighting) {
+            tickNightLighting(server);
+        } else {
+            applyLampState(server.getOverworld(), manualLitState);
+            lastAppliedLit = manualLitState;
+        }
         return autoNightLighting;
     }
 
     public static void forceLightingState(MinecraftServer server, boolean lit) {
         autoNightLighting = false;
+        manualLitState = lit;
         applyLampState(server.getOverworld(), lit);
-        lastLitState = lit;
+        lastAppliedLit = lit;
     }
 
     public static void tickNightLighting(MinecraftServer server) {
@@ -131,19 +151,22 @@ public class RoadNetworkManager {
         if (world == null) return;
         long timeOfDay = world.getTimeOfDay() % 24000L;
         boolean shouldBeLit = timeOfDay >= 12500L && timeOfDay <= 23500L;
-        if (lastLitState == null || lastLitState != shouldBeLit) {
+        if (lastAppliedLit == null || lastAppliedLit != shouldBeLit) {
             applyLampState(world, shouldBeLit);
-            lastLitState = shouldBeLit;
+            lastAppliedLit = shouldBeLit;
         }
     }
 
     private static synchronized void applyLampState(ServerWorld world, boolean lit) {
-        BlockState lampState = Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, lit);
+        if (world == null) return;
+        BlockState targetState = lit
+                ? Blocks.SEA_LANTERN.getDefaultState()
+                : Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, false);
         for (BlockPos pos : STREET_LAMPS) {
             if (world.isChunkLoaded(pos)) {
                 BlockState current = world.getBlockState(pos);
                 if (current.isOf(Blocks.REDSTONE_LAMP) || current.isOf(Blocks.SEA_LANTERN)) {
-                    StreamingBuilderEngine.placeBlockFast(world, pos, lampState);
+                    StreamingBuilderEngine.placeBlockFast(world, pos, targetState);
                 }
             }
         }
