@@ -45,9 +45,7 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
     private final int floors;
     private final long totalBlocks;
 
-    private int curF = 0;
-    private int curY = 0;
-    private int curR = 0;
+    private int curF = 0, curY = 0, curR = 0;
     private long placedBlocks = 0;
     private boolean finished = false;
 
@@ -117,7 +115,6 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
         int mainTopY = floors * FLOOR_HEIGHT;
         int center = size / 2;
 
-        // Twin Skybridge Tower split logic
         if (style == Style.TWIN) {
             int gapHalf = 3;
             boolean inGap = Math.abs(x - center) < gapHalf;
@@ -127,26 +124,25 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
             }
         }
 
-        int setback = 0;
+        int minB = 0;
+        int maxB = size - 1;
         if (style == Style.SETBACK) {
-            setback = Math.min(6, (y / Math.max(15, mainTopY / 4)) * 2);
+            int setback = Math.min(6, (y / Math.max(15, mainTopY / 4)) * 2);
+            minB = setback;
+            maxB = size - 1 - setback;
         } else if (style == Style.CANTILEVER) {
-            // Subtle architectural shift every 6 floors
-            int shift = ((y / 30) % 2 == 1) ? 2 : 0;
-            if (x < shift || z < shift) return Blocks.AIR.getDefaultState();
+            // Shift bounds cleanly so EVERY shifted floor still has full outer glass walls!
+            int shift = ((y / 25) % 2 == 1) ? 2 : 0;
+            minB = shift;
+            maxB = size - 1 - (2 - shift);
         }
 
-        int minB = setback;
-        int maxB = size - 1 - setback;
-
-        // Curved glass corner chamfer
         if (style == Style.CURVED) {
             int cornerDist = Math.min(Math.abs(x - minB), Math.abs(x - maxB))
                     + Math.min(Math.abs(z - minB), Math.abs(z - maxB));
             if (cornerDist <= 2) return Blocks.AIR.getDefaultState();
         }
 
-        // Crown & Helipad above mainTopY
         if (y > mainTopY) {
             int crownY = y - mainTopY;
             if (totalHeight >= 100 && crownY == 1) {
@@ -168,8 +164,7 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
         if (x < minB || x > maxB || z < minB || z > maxB) return Blocks.AIR.getDefaultState();
 
         if (y == mainTopY) {
-            if (x == minB || x == maxB || z == minB || z == maxB) return Blocks.WHITE_CONCRETE.getDefaultState();
-            return (x % 6 == 0 && z % 6 == 0) ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState() : Blocks.SMOOTH_QUARTZ.getDefaultState();
+            return Blocks.WHITE_CONCRETE.getDefaultState();
         }
 
         int floorIndex = y / FLOOR_HEIGHT;
@@ -178,9 +173,7 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
                 || (style == Style.CURVED && (Math.min(Math.abs(x - minB), Math.abs(x - maxB))
                 + Math.min(Math.abs(z - minB), Math.abs(z - maxB)) == 3));
 
-        // 1. Exterior Layered Glass Curtain Wall
         if (isFacade) {
-            // Grand Lobby Entrance facing player (z == minB)
             if (floorIndex == 0 && z == minB && Math.abs(x - center) <= 3) {
                 if (localY >= 1 && localY <= 3) return Blocks.AIR.getDefaultState();
                 if (localY == 4) return Blocks.SEA_LANTERN.getDefaultState();
@@ -192,10 +185,10 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
             return (localY == 2) ? Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState() : Blocks.TINTED_GLASS.getDefaultState();
         }
 
-        // 2. Flush Stairwell (top step sits flush inside upper floor slab with 4-block headroom)
+        // Flush Stairwell
         boolean inStairBox = (x >= center - 4 && x <= center - 3) && (z >= center - 2 && z <= center + 2);
         if (inStairBox) {
-            int step = z - (center - 2); // 0..4
+            int step = z - (center - 2);
             for (int f = 0; f < floors - 1; f++) {
                 int stairY = f * FLOOR_HEIGHT + step + 1;
                 if (y == stairY) {
@@ -205,13 +198,19 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
                 if (y > stairY && y <= stairY + 4) return Blocks.AIR.getDefaultState();
             }
         }
+
+        // Spotless Floor Slabs
         if (localY == 0) {
             if (Math.abs(x - center) <= 1 && Math.abs(z - center) <= 1 && floorIndex > 0) return Blocks.AIR.getDefaultState();
-            if (x % 6 == 3 && z % 6 == 3) return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
             return (floorIndex == 0) ? Blocks.SMOOTH_QUARTZ.getDefaultState() : Blocks.WHITE_CONCRETE.getDefaultState();
         }
 
-        // 3. Central Elevator Shaft & Divided Office Rooms
+        // Hidden ceiling lights along upper wall/column perimeter (ly == 4)
+        if (localY == 4 && (x % 6 == 0 && z % 6 == 0)) {
+            return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
+        }
+
+        // Central Elevator Core
         int dx = Math.abs(x - center);
         int dz = Math.abs(z - center);
         if (dx <= 2 && dz <= 2 && (dx == 2 || dz == 2)) {
@@ -219,9 +218,21 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
             return Blocks.WHITE_TERRACOTTA.getDefaultState();
         }
 
-        if (floorIndex > 0 && ((x == center || z == center) && (dx > 2 || dz > 2))) {
-            if ((dx == 5 || dz == 5) && localY <= 3) return Blocks.AIR.getDefaultState();
-            return (localY == 4) ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
+        // Each Floor = 1 Distinct Company:
+        // Front half (z < center) = Open Employee Bullpen + Reception Counter
+        // Back half (z >= center + 4) = Divided Private Executive & Manager Offices
+        if (floorIndex > 0) {
+            // Company reception counter in front of elevator core
+            if (z == center - 5 && Math.abs(x - center) <= 1 && localY == 1) {
+                return Blocks.SMOOTH_QUARTZ.getDefaultState();
+            }
+            // Divided private executive offices in the back zone
+            if (z == center + 4 || (z > center + 4 && (x == center - 5 || x == center || x == center + 5))) {
+                if (localY <= 3 && (x == center - 3 || x == center + 3 || z == center + 7)) {
+                    return Blocks.AIR.getDefaultState();
+                }
+                return (localY == 4) ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
+            }
         }
 
         return Blocks.AIR.getDefaultState();

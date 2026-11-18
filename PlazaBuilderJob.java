@@ -141,8 +141,10 @@ public class PlazaBuilderJob implements StreamingBuilderEngine.BuildJob {
             }
         }
         if (localY == 0) {
-            if (x % 6 == 3 && z % 6 == 3) return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
             return (floorIndex == 0) ? Blocks.BIRCH_PLANKS.getDefaultState() : Blocks.SMOOTH_QUARTZ.getDefaultState();
+        }
+        if (localY == 4 && x % 6 == 0 && z % 6 == 0) {
+            return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
         }
 
         // Ground floor Cafe & Retail divisions + Upper floor distinct Company Offices with reception counters

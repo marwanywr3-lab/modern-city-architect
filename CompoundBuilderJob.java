@@ -29,7 +29,7 @@ public class CompoundBuilderJob implements StreamingBuilderEngine.BuildJob {
         }
     }
 
-    private static final int PLOT_SIZE = 20; // 14x14 villa + 6-block street/yard
+    private static final int PLOT_SIZE = 20;
     private final ServerWorld world;
     private final UUID ownerId;
     private final BlockPos anchor;
@@ -100,7 +100,6 @@ public class CompoundBuilderJob implements StreamingBuilderEngine.BuildJob {
     }
 
     private BlockState computeBlock(int x, int y, int z) {
-        // Perimeter Compound Security Wall & Main Gate
         boolean onWall = (x == 0 || x == totalW - 1 || z == 0 || z == totalD - 1);
         if (onWall) {
             if (z == 0 && Math.abs(x - totalW / 2) <= 4) {
@@ -122,38 +121,49 @@ public class CompoundBuilderJob implements StreamingBuilderEngine.BuildJob {
         int lx = gx % PLOT_SIZE;
         int lz = gz % PLOT_SIZE;
 
-        // Internal paved compound streets (lx >= 15 or lz >= 15)
         if (lx >= 15 || lz >= 15) {
             if (y == 0) return Blocks.GRAY_CONCRETE.getDefaultState();
-            if (lx == 15 && lz == 15 && y >= 1 && y <= 4) {
-                return (y == 4) ? Blocks.SEA_LANTERN.getDefaultState() : Blocks.IRON_BARS.getDefaultState();
+            if (lx == 15 && lz == 15) {
+                if (y >= 1 && y <= 3) return Blocks.POLISHED_DEEPSLATE_WALL.getDefaultState();
+                if (y == 4) return Blocks.SEA_LANTERN.getDefaultState();
             }
             return Blocks.AIR.getDefaultState();
         }
 
-        // Modern 2-story Villa inside each plot (lx: 1..13, lz: 1..13)
         if (lx == 0 || lx == 14 || lz == 0 || lz == 14) {
             return (y == 0) ? Blocks.GRASS_BLOCK.getDefaultState() : Blocks.AIR.getDefaultState();
         }
 
         if (y == 0) return Blocks.SMOOTH_QUARTZ.getDefaultState();
         if (y > 10) return Blocks.AIR.getDefaultState();
-        if (y == 10) return (lx % 4 == 0 && lz % 4 == 0) ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState() : Blocks.WHITE_CONCRETE.getDefaultState();
+
+        // Clean closed white concrete roof (no exposed froglights on top!)
+        if (y == 10) {
+            return Blocks.WHITE_CONCRETE.getDefaultState();
+        }
 
         int floor = y / 5;
         int ly = y % 5;
-        boolean villaWall = (lx == 1 || lx == 13 || lz == 1 || lz == 13);
+        boolean onXEdge = (lx == 1 || lx == 13);
+        boolean onZEdge = (lz == 1 || lz == 13);
+        boolean villaWall = onXEdge || onZEdge;
 
         if (villaWall) {
+            // Front entrance door
             if (floor == 0 && lz == 1 && lx >= 6 && lx <= 8 && ly <= 3) return Blocks.AIR.getDefaultState();
+            // Horizontal slab bands
             if (ly == 0) return Blocks.WHITE_TERRACOTTA.getDefaultState();
-            if (lx % 4 == 1 || lz % 4 == 1) return Blocks.WHITE_CONCRETE.getDefaultState();
-            return Blocks.TINTED_GLASS.getDefaultState();
+            // Corner pillars & mid-wall columns ONLY (so panoramic windows open cleanly!)
+            boolean isCorner = onXEdge && onZEdge;
+            boolean isMidCol = (onZEdge && (lx == 5 || lx == 9)) || (onXEdge && (lz == 5 || lz == 9));
+            if (isCorner || isMidCol) return Blocks.WHITE_CONCRETE.getDefaultState();
+            return Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
         }
 
+        // Flush staircase inside villa
         boolean inStair = (lx >= 2 && lx <= 3) && (lz >= 7 && lz <= 11);
         if (inStair) {
-            int step = lz - 7; // 0..4
+            int step = lz - 7;
             int stairY = step + 1;
             if (y == stairY) {
                 return Blocks.SMOOTH_QUARTZ_STAIRS.getDefaultState()
@@ -161,11 +171,17 @@ public class CompoundBuilderJob implements StreamingBuilderEngine.BuildJob {
             }
             if (y > stairY && y <= stairY + 4) return Blocks.AIR.getDefaultState();
         }
+
         if (ly == 0) {
-            return (lx % 4 == 2 && lz % 4 == 2) ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState() : Blocks.BIRCH_PLANKS.getDefaultState();
+            return (floor == 0) ? Blocks.SMOOTH_QUARTZ.getDefaultState() : Blocks.BIRCH_PLANKS.getDefaultState();
         }
 
-        // Divided interior rooms (Living/Kitchen/Bedrooms)
+        // Hidden ceiling lights along upper corners (ly == 4) so floor stays spotless
+        if (ly == 4 && (lx == 2 || lx == 12) && (lz == 2 || lz == 12)) {
+            return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
+        }
+
+        // Divided interior rooms (Living / Kitchen / Bedrooms)
         if ((lx == 7 || lz == 7) && ly <= 4) {
             if (ly <= 3 && (lx == 10 || lz == 4)) return Blocks.AIR.getDefaultState();
             return Blocks.WHITE_CONCRETE.getDefaultState();

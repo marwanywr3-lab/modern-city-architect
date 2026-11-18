@@ -167,11 +167,17 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
     }
 
     private void placeStreetlight(BlockPos base, int height, boolean doubleHead) {
-        for (int h = 1; h <= height; h++) {
-            addPlacement(base.up(h), Blocks.IRON_BARS.getDefaultState());
+        addPlacement(base.up(1), Blocks.SMOOTH_QUARTZ.getDefaultState());
+        for (int h = 2; h <= height; h++) {
+            addPlacement(base.up(h), Blocks.POLISHED_DEEPSLATE_WALL.getDefaultState());
         }
-        BlockState lamp = RoadNetworkManager.isManualLitState() ? Blocks.SEA_LANTERN.getDefaultState() : Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, false);
+        addPlacement(base.up(height + 1), Blocks.WHITE_CONCRETE.getDefaultState());
+        BlockState lamp = RoadNetworkManager.isManualLitState()
+                ? Blocks.SEA_LANTERN.getDefaultState()
+                : Blocks.REDSTONE_LAMP.getDefaultState().with(Properties.LIT, false);
         if (doubleHead) {
+            addPlacement(base.up(height + 1).east(), Blocks.WHITE_CONCRETE.getDefaultState());
+            addPlacement(base.up(height + 1).west(), Blocks.WHITE_CONCRETE.getDefaultState());
             BlockPos p1 = base.up(height).east();
             BlockPos p2 = base.up(height).west();
             addPlacement(p1, lamp);

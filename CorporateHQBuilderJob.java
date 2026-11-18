@@ -20,8 +20,8 @@ public class CorporateHQBuilderJob implements StreamingBuilderEngine.BuildJob {
     public enum HQType {
         HQ_TOWER_TWIN_FIN(32, 32, 60, "HQ Tower Style A (Twin-Fin)"),
         HQ_TOWER_ATRIUM(34, 34, 120, "HQ Tower Style B (Executive Atrium)"),
-        LOW_OFFICE_COURTYARD(36, 28, 12, "Low-Rise Office A (2F Courtyard)"),
-        LOW_OFFICE_PAVILION(32, 26, 22, "Mid-Rise Office B (4F Pavilion)");
+        LOW_OFFICE_COURTYARD(36, 28, 12, "Low-Rise Office A (2F Suites)"),
+        LOW_OFFICE_PAVILION(34, 28, 22, "Mid-Rise Office B (4F Suites)");
 
         public final int width;
         public final int depth;
@@ -116,10 +116,7 @@ public class CorporateHQBuilderJob implements StreamingBuilderEngine.BuildJob {
             }
             return Blocks.AIR.getDefaultState();
         }
-        if (y == topY) {
-            if (x == 0 || x == W - 1 || z == 0 || z == D - 1) return Blocks.WHITE_CONCRETE.getDefaultState();
-            return (x % 6 == 0 && z % 6 == 0) ? Blocks.PEARLESCENT_FROGLIGHT.getDefaultState() : Blocks.SMOOTH_QUARTZ.getDefaultState();
-        }
+        if (y == topY) return Blocks.WHITE_CONCRETE.getDefaultState();
 
         int floor = y / FLOOR_HEIGHT;
         int ly = y % FLOOR_HEIGHT;
@@ -134,7 +131,7 @@ public class CorporateHQBuilderJob implements StreamingBuilderEngine.BuildJob {
 
         boolean inStair = (x >= 3 && x <= 4) && (z >= 4 && z <= 8);
         if (inStair) {
-            int step = z - 4; // 0..4
+            int step = z - 4;
             for (int f = 0; f < floors - 1; f++) {
                 int stairY = f * FLOOR_HEIGHT + step + 1;
                 if (y == stairY) {
@@ -144,29 +141,42 @@ public class CorporateHQBuilderJob implements StreamingBuilderEngine.BuildJob {
                 if (y > stairY && y <= stairY + 4) return Blocks.AIR.getDefaultState();
             }
         }
+
         if (ly == 0) {
-            if (x % 6 == 3 && z % 6 == 3) return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
             return (floor == 0) ? Blocks.SMOOTH_QUARTZ.getDefaultState() : Blocks.BIRCH_PLANKS.getDefaultState();
         }
 
-        // Clearly divided executive offices (each 10x10 suite with glass wall & door)
-        if (floor > 0 && (x % 10 == 0 || z % 10 == 0)) {
-            if (ly <= 3 && (x % 10 == 5 || z % 10 == 5)) return Blocks.AIR.getDefaultState();
-            return (ly == 4) ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
+        // Hidden ceiling lights on ly == 4
+        if (ly == 4 && (x % 6 == 0 && z % 6 == 0)) {
+            return Blocks.PEARLESCENT_FROGLIGHT.getDefaultState();
+        }
+
+        boolean isLowOffice = (type == HQType.LOW_OFFICE_COURTYARD || type == HQType.LOW_OFFICE_PAVILION);
+        if (isLowOffice) {
+            // Varied Company Suites: Left/Center = Medium suites (10w), Right = Large Anchor Suite (14w)
+            int hallwayZ = D / 2;
+            if (Math.abs(z - hallwayZ) == 2) {
+                if (ly <= 3 && (x == 9 || x == 19 || x == 27)) return Blocks.AIR.getDefaultState();
+                return Blocks.WHITE_CONCRETE.getDefaultState();
+            }
+            if (Math.abs(z - hallwayZ) > 2 && (x == 12 || x == 22)) {
+                return (ly == 4) ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
+            }
+        } else {
+            // HQ Tower: 1 Company per floor -> Open Employee Workspace + Back Executive Offices
+            if (floor > 0 && (z == D - 10 || (z > D - 10 && x % 10 == 0))) {
+                if (ly <= 3 && (x % 10 == 5 || z == D - 5)) return Blocks.AIR.getDefaultState();
+                return (ly == 4) ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState();
+            }
         }
 
         return Blocks.AIR.getDefaultState();
     }
 
-    /**
-     * Places a ready-to-use Company Reception Desk + Company Name Sign + 2 Front Chairs inside any building!
-     */
     public static void placeCompanyReception(ServerWorld world, BlockPos anchor, Direction facing, String companyName) {
-        // Reception Counter (3 blocks wide)
         for (int r = 0; r <= 2; r++) {
             world.setBlockState(PlacementUtil.toWorld(anchor, facing, r, 0, 2), Blocks.SMOOTH_QUARTZ.getDefaultState());
         }
-        // Backdrop wall + Illuminated Company Name Sign behind desk
         for (int r = -1; r <= 3; r++) {
             for (int y = 0; y <= 2; y++) {
                 world.setBlockState(PlacementUtil.toWorld(anchor, facing, r, y, 4), Blocks.WHITE_CONCRETE.getDefaultState());
@@ -183,10 +193,7 @@ public class CorporateHQBuilderJob implements StreamingBuilderEngine.BuildJob {
             signEntity.setText(text, true);
             signEntity.markDirty();
         }
-
-        // 2 Chairs in front of reception desk
-        BlockState chairState = Blocks.SMOOTH_QUARTZ_STAIRS.getDefaultState()
-                .with(StairsBlock.FACING, facing);
+        BlockState chairState = Blocks.SMOOTH_QUARTZ_STAIRS.getDefaultState().with(StairsBlock.FACING, facing);
         world.setBlockState(PlacementUtil.toWorld(anchor, facing, 0, 0, 0), chairState);
         world.setBlockState(PlacementUtil.toWorld(anchor, facing, 2, 0, 0), chairState);
     }
