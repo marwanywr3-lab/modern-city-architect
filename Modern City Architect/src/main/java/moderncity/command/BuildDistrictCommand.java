@@ -53,8 +53,8 @@ public class BuildDistrictCommand {
 
         if (commercial) {
             WaypointManager.addWaypoint("Commercial District", base, 0x38BDF8);
-            StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, ownerId, base.offset(facing, 14), facing, TowerBuilderJob.Style.SETBACK, 85));
-            StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, ownerId, base.offset(facing, 14).offset(facing.rotateYClockwise(), 40), facing, TowerBuilderJob.Style.CURVED, 120));
+            StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, ownerId, base.offset(facing, 14), facing, TowerBuilderJob.Style.TWISTED, 85));
+            StreamingBuilderEngine.enqueueJob(new TowerBuilderJob(world, ownerId, base.offset(facing, 14).offset(facing.rotateYClockwise(), 40), facing, TowerBuilderJob.Style.CRYSTAL_DIAGRID, 120));
             StreamingBuilderEngine.enqueueJob(new PlazaBuilderJob(world, ownerId, base.offset(facing, 60), facing, PlazaBuilderJob.Shape.U, PlazaBuilderJob.Layout.OFFICE, 4));
             source.sendFeedback(() -> Text.literal("Queued Auto Commercial District (Boulevard + 2 Towers + U-Plaza)!").formatted(Formatting.AQUA), true);
         } else {

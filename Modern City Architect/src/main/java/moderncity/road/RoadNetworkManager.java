@@ -23,7 +23,7 @@ import java.util.UUID;
 public class RoadNetworkManager {
 
     public enum CurveType {
-        STRAIGHT, CORNER90, SCURVE, UTURN
+        FOLLOW_PATH, STRAIGHT, CORNER90, SCURVE, UTURN
     }
 
     public enum DirectionMode {
@@ -76,9 +76,7 @@ public class RoadNetworkManager {
 
     public static synchronized void recordRoadSegment(RoadSegmentRecord record) {
         ROAD_HISTORY.push(record);
-        if (ROAD_HISTORY.size() > 25) {
-            ROAD_HISTORY.removeLast();
-        }
+        if (ROAD_HISTORY.size() > 25) ROAD_HISTORY.removeLast();
     }
 
     public static synchronized void registerStreetLamp(BlockPos pos) {
@@ -178,6 +176,15 @@ public class RoadNetworkManager {
             RoadWandItem.WandState state = RoadWandItem.getState(player.getUuid());
             if (state.firstPoint == null) continue;
 
+            // Record smooth path control points as the player walks/flies & turns left/right
+            BlockPos currentPos = new BlockPos(player.getBlockX(), state.firstPoint.getY(), player.getBlockZ());
+            if (state.curveType == CurveType.FOLLOW_PATH) {
+                BlockPos lastPt = state.pathPoints.isEmpty() ? state.firstPoint : state.pathPoints.get(state.pathPoints.size() - 1);
+                if (lastPt.getSquaredDistance(currentPos) >= 64.0) { // every 8 blocks
+                    state.pathPoints.add(currentPos);
+                }
+            }
+
             HitResult hit = player.raycast(60.0, 0.0f, false);
             BlockPos target = (hit.getType() == HitResult.Type.BLOCK)
                     ? ((BlockHitResult) hit).getBlockPos()
@@ -185,15 +192,25 @@ public class RoadNetworkManager {
             target = autoSnap(target);
 
             ServerWorld world = player.getServerWorld();
-            double dx = target.getX() - state.firstPoint.getX();
-            double dz = target.getZ() - state.firstPoint.getZ();
-            int steps = Math.max(4, (int) (Math.hypot(dx, dz) / 2.0));
-            for (int i = 0; i <= steps; i++) {
-                double t = (double) i / steps;
-                double px = state.firstPoint.getX() + dx * t + 0.5;
-                double py = state.firstPoint.getY() + 1.3;
-                double pz = state.firstPoint.getZ() + dz * t + 0.5;
-                world.spawnParticles(player, ParticleTypes.END_ROD, true, px, py, pz, 1, 0, 0, 0, 0);
+            List<BlockPos> previewPts = new ArrayList<>();
+            previewPts.add(state.firstPoint);
+            if (state.curveType == CurveType.FOLLOW_PATH) {
+                previewPts.addAll(state.pathPoints);
+            }
+            previewPts.add(target);
+
+            for (int seg = 0; seg < previewPts.size() - 1; seg++) {
+                BlockPos a = previewPts.get(seg);
+                BlockPos b = previewPts.get(seg + 1);
+                double dx = b.getX() - a.getX();
+                double dz = b.getZ() - a.getZ();
+                int steps = Math.max(2, (int) (Math.hypot(dx, dz) / 2.5));
+                for (int i = 0; i <= steps; i++) {
+                    double t = (double) i / steps;
+                    world.spawnParticles(player, ParticleTypes.END_ROD, true,
+                            a.getX() + dx * t + 0.5, state.firstPoint.getY() + 1.3, a.getZ() + dz * t + 0.5,
+                            1, 0, 0, 0, 0);
+                }
             }
         }
     }

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "modern-city-architect:block/elevator_block"
+    }
+  }
+}

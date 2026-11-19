@@ -186,6 +186,7 @@ public class StreamingBuilderEngine {
             RoadNetworkManager.tickRoadPreview(server);
             VolumeWandItem.tickWireframePreview(server);
             moderncity.util.BuildingPreviewManager.tickPreviews(server);
+            moderncity.block.ModBlocks.tickElevators(server);
         }
         if (tickCounter % 100 == 0) {
             RoadNetworkManager.tickNightLighting(server);

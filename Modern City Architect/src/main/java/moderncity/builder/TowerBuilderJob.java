@@ -1,5 +1,6 @@
 package moderncity.builder;
 
+import moderncity.block.ModBlocks;
 import moderncity.engine.StreamingBuilderEngine;
 import moderncity.map.WaypointManager;
 import moderncity.util.PlacementUtil;
@@ -235,6 +236,9 @@ public class TowerBuilderJob implements StreamingBuilderEngine.BuildJob {
         }
 
         if (localY == 0) {
+            if (x == center && z == center && style != Style.ARCH_PORTAL) {
+                return ModBlocks.ELEVATOR_BLOCK.getDefaultState();
+            }
             if (Math.abs(x - center) <= 1 && Math.abs(z - center) <= 1 && floorIndex > 0 && style != Style.ARCH_PORTAL) {
                 return Blocks.AIR.getDefaultState();
             }

@@ -37,6 +37,7 @@ public class RoadWandScreenHandler extends GenericContainerScreenHandler {
         setBtn(20, Items.GRASS_BLOCK, "Mode: Two-Way (Grass + Quartz Median Lamps)", Formatting.GREEN);
 
         // Row 3: Curve Mode & Undo
+        setBtn(27, Items.COMPASS, "Curve: Smooth Follow-Turn (Auto)", Formatting.AQUA);
         setBtn(28, Items.STICK, "Curve: Straight", Formatting.WHITE);
         setBtn(29, Items.RAIL, "Curve: 90-Degree Corner", Formatting.YELLOW);
         setBtn(30, Items.POWERED_RAIL, "Curve: S-Curve", Formatting.YELLOW);
@@ -63,6 +64,7 @@ public class RoadWandScreenHandler extends GenericContainerScreenHandler {
             case 14 -> state.roadClass = RoadClass.HIGHWAY_16;
             case 19 -> state.directionMode = RoadNetworkManager.DirectionMode.ONE_WAY;
             case 20 -> state.directionMode = RoadNetworkManager.DirectionMode.TWO_WAY;
+            case 27 -> state.curveType = RoadNetworkManager.CurveType.FOLLOW_PATH;
             case 28 -> state.curveType = RoadNetworkManager.CurveType.STRAIGHT;
             case 29 -> state.curveType = RoadNetworkManager.CurveType.CORNER90;
             case 30 -> state.curveType = RoadNetworkManager.CurveType.SCURVE;

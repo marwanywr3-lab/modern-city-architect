@@ -21,6 +21,8 @@ import moderncity.command.CompanyHQCommand;
 import moderncity.command.RoadWandCommand;
 import moderncity.command.TerraformCommand;
 import moderncity.engine.StreamingBuilderEngine;
+import moderncity.block.ModBlocks;
+import moderncity.command.BuildLandmarkCommand;
 import moderncity.item.ModItems;
 import moderncity.item.VolumeWandItem;
 import net.fabricmc.api.ModInitializer;
@@ -43,6 +45,7 @@ public class ModernCityArchitect implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Initializing Modern City Architect Mod v2.0...");
 
+        ModBlocks.register();
         ModItems.register();
         StreamingBuilderEngine.register();
 
@@ -66,6 +69,7 @@ public class ModernCityArchitect implements ModInitializer {
             BuildFinancialCenterCommand.register(dispatcher);
             UndoCommand.register(dispatcher);
             PreviewCommand.register(dispatcher);
+            BuildLandmarkCommand.register(dispatcher);
             BuildDistrictCommand.register(dispatcher);
         });
 

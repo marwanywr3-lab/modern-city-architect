@@ -3,7 +3,9 @@ package moderncity.gui;
 import moderncity.builder.ApartmentTowerJob;
 import moderncity.builder.CompoundBuilderJob;
 import moderncity.builder.FacilityBuilderJob;
+import moderncity.builder.CentralParkBuilderJob;
 import moderncity.builder.FinancialCenterBuilderJob;
+import moderncity.builder.StadiumBuilderJob;
 import moderncity.builder.HotelBuilderJob;
 import moderncity.builder.LuxuryCompoundBuilderJob;
 import moderncity.util.BuildingPreviewManager;
@@ -76,6 +78,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
         setEntry(42, Items.DIAMOND_SHOVEL, "Get Mega-Terraformer", Formatting.GREEN);
         setEntry(43, Items.PAPER, "Get Custom Blueprint Saver", Formatting.YELLOW);
         setEntry(44, Items.MAGENTA_BED, "Build Grand Hotel (80x50x46)", Formatting.LIGHT_PURPLE);
+        setEntry(46, Items.LIME_CONCRETE, "Build International Stadium (110x140)", Formatting.GREEN);
+        setEntry(47, Items.AZALEA, "Build Grand Central Park (120x120)", Formatting.GREEN);
         setEntry(48, Items.GOLD_BLOCK, "Build Financial CENTER (3000x3000)", Formatting.GOLD);
         setEntry(49, Items.BARRIER, "GLOBAL UNDO (Last Build/Road)", Formatting.RED);
     }
@@ -123,6 +127,8 @@ public class VisualCatalogScreenHandler extends GenericContainerScreenHandler {
             case 42 -> sp.getInventory().insertStack(new ItemStack(ModItems.MEGA_TERRAFORMER));
             case 43 -> sp.getInventory().insertStack(new ItemStack(ModItems.BLUEPRINT_SAVER));
             case 44 -> BuildingPreviewManager.setPreview(sp, "Grand Hotel (80x50x46)", 50, 80, 46, (w, id, a, f) -> new HotelBuilderJob(w, id, a, f, 80, 50, 46));
+            case 46 -> BuildingPreviewManager.setPreview(sp, "International Stadium", 110, 140, 30, StadiumBuilderJob::new);
+            case 47 -> BuildingPreviewManager.setPreview(sp, "Grand Central Park", 120, 120, 6, CentralParkBuilderJob::new);
             case 48 -> StreamingBuilderEngine.enqueueJob(new FinancialCenterBuilderJob(world, sp.getUuid(), anchor, facing));
             case 49 -> StreamingBuilderEngine.triggerGlobalUndo(sp.getUuid());
             default -> { return; }

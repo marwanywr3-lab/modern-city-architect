@@ -57,6 +57,7 @@ public class ModItems {
                         entries.add(CITY_CONTROLLER);
                         entries.add(MEGA_TERRAFORMER);
                         entries.add(BLUEPRINT_SAVER);
+                        entries.add(moderncity.block.ModBlocks.ELEVATOR_BLOCK_ITEM);
                     })
                     .build()
     );

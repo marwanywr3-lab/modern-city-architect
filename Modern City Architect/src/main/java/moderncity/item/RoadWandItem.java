@@ -17,9 +17,12 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,9 +30,11 @@ public class RoadWandItem extends Item {
 
     public static class WandState {
         public BlockPos firstPoint = null;
+        public Direction startFacing = Direction.NORTH;
+        public final List<BlockPos> pathPoints = new ArrayList<>();
         public RoadClass roadClass = RoadClass.MEDIUM_7;
         public RoadNetworkManager.DirectionMode directionMode = RoadNetworkManager.DirectionMode.TWO_WAY;
-        public RoadNetworkManager.CurveType curveType = RoadNetworkManager.CurveType.STRAIGHT;
+        public RoadNetworkManager.CurveType curveType = RoadNetworkManager.CurveType.FOLLOW_PATH;
     }
 
     private static final Map<UUID, WandState> STATES = new HashMap<>();
@@ -73,16 +78,24 @@ public class RoadWandItem extends Item {
 
         if (state.firstPoint == null) {
             state.firstPoint = clicked;
-            player.sendMessage(Text.literal("Road Start set! Walk/fly to End Point and Right-Click (Preview active).")
+            state.startFacing = player.getHorizontalFacing();
+            state.pathPoints.clear();
+            player.sendMessage(Text.literal("Road Start set! Walk/turn left or right smoothly, then Right-Click End Point.")
                     .formatted(Formatting.AQUA), true);
         } else {
             BlockPos start = state.firstPoint;
+            List<BlockPos> waypoints = new ArrayList<>(state.pathPoints);
+            Direction startDir = state.startFacing;
             state.firstPoint = null;
+            state.pathPoints.clear();
+
             StreamingBuilderEngine.enqueueJob(new RoadBuilderJob(
                     (ServerWorld) context.getWorld(),
                     player.getUuid(),
                     start,
                     clicked,
+                    waypoints,
+                    startDir,
                     state.roadClass,
                     state.directionMode,
                     state.curveType

@@ -7,6 +7,7 @@ import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,12 +32,19 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
     public RoadBuilderJob(ServerWorld world, UUID ownerId, BlockPos start, BlockPos end,
                           RoadClass roadClass, RoadNetworkManager.DirectionMode directionMode,
                           RoadNetworkManager.CurveType curveType) {
+        this(world, ownerId, start, end, List.of(), Direction.NORTH, roadClass, directionMode, curveType);
+    }
+
+    public RoadBuilderJob(ServerWorld world, UUID ownerId, BlockPos start, BlockPos end,
+                          List<BlockPos> waypoints, Direction startFacing,
+                          RoadClass roadClass, RoadNetworkManager.DirectionMode directionMode,
+                          RoadNetworkManager.CurveType curveType) {
         this.world = world;
         this.ownerId = ownerId;
         this.roadClass = roadClass;
         this.directionMode = directionMode;
         this.curveType = curveType;
-        generateRoad(start, end);
+        generateRoad(start, end, waypoints, startFacing);
         RoadNetworkManager.registerEndpoints(start, end);
         RoadNetworkManager.recordRoadSegment(new RoadNetworkManager.RoadSegmentRecord(
                 start, end, roadClass, directionMode, curveType, undoEntries
@@ -51,13 +59,10 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         placements.add(new Placement(imm, state));
     }
 
-    private void generateRoad(BlockPos start, BlockPos end) {
-        List<BlockPos> centerline = sampleCenterline(start, end);
+    private void generateRoad(BlockPos start, BlockPos end, List<BlockPos> waypoints, Direction startFacing) {
+        List<BlockPos> centerline = sampleCenterline(start, end, waypoints, startFacing);
         int baseY = start.getY();
 
-        // Cross-section layout:
-        // ONE_WAY: [sidewalk] [roadWidth] [sidewalk]
-        // TWO_WAY: [sidewalk] [roadWidth] [quartz curb + 3 grass + quartz curb (5 blocks)] [roadWidth] [sidewalk]
         int medianHalf = (directionMode == RoadNetworkManager.DirectionMode.TWO_WAY) ? 2 : -1;
         int asphaltHalf = (directionMode == RoadNetworkManager.DirectionMode.TWO_WAY)
                 ? (2 + roadClass.roadWidth)
@@ -66,8 +71,8 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
 
         for (int i = 0; i < centerline.size(); i++) {
             BlockPos c = centerline.get(i);
-            BlockPos prev = centerline.get(Math.max(0, i - 1));
-            BlockPos next = centerline.get(Math.min(centerline.size() - 1, i + 1));
+            BlockPos prev = centerline.get(Math.max(0, i - 2));
+            BlockPos next = centerline.get(Math.min(centerline.size() - 1, i + 2));
 
             double dx = next.getX() - prev.getX();
             double dz = next.getZ() - prev.getZ();
@@ -80,11 +85,13 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
             boolean isBridge = world.getFluidState(checkPos).isIn(FluidTags.WATER)
                     || world.getFluidState(checkPos.down()).isIn(FluidTags.WATER);
             boolean isTunnel = !isBridge && world.getBlockState(checkPos.up(4)).isSolidBlock(world, checkPos.up(4));
-            boolean isCrosswalk = !isBridge && !isTunnel && (i == 2 || i == centerline.size() - 3);
+            boolean isCrosswalk = !isBridge && !isTunnel && (i == 4 || i == centerline.size() - 5);
 
-            for (int offset = -totalHalf; offset <= totalHalf; offset++) {
-                int bx = (int) Math.round(c.getX() + perpX * offset);
-                int bz = (int) Math.round(c.getZ() + perpZ * offset);
+            // Half-block cross-section stepping eliminates any diagonal/curve gaps!
+            for (double offD = -totalHalf; offD <= totalHalf; offD += 0.5) {
+                int offset = (int) Math.round(offD);
+                int bx = (int) Math.round(c.getX() + perpX * offD);
+                int bz = (int) Math.round(c.getZ() + perpZ * offD);
                 int absOff = Math.abs(offset);
 
                 BlockState surface;
@@ -92,7 +99,6 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                 boolean isMedian = (directionMode == RoadNetworkManager.DirectionMode.TWO_WAY && absOff <= medianHalf);
 
                 if (isMedian) {
-                    // Grass median bordered by white Smooth Quartz
                     if (absOff == medianHalf) {
                         surface = Blocks.SMOOTH_QUARTZ.getDefaultState();
                     } else {
@@ -106,7 +112,7 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                                 ? (absOff - medianHalf - 1)
                                 : (offset + asphaltHalf);
                         boolean isEdge = (absOff == asphaltHalf) || (directionMode == RoadNetworkManager.DirectionMode.TWO_WAY && absOff == medianHalf + 1);
-                        boolean isLaneLine = !isEdge && roadClass.roadWidth >= 7 && (distInCarriageway % 4 == 0) && (i % 6 < 3);
+                        boolean isLaneLine = !isEdge && roadClass.roadWidth >= 7 && (distInCarriageway % 4 == 0) && ((i / 2) % 6 < 3);
                         if (isEdge && roadClass.isHighway()) {
                             surface = Blocks.YELLOW_CONCRETE.getDefaultState();
                         } else if (isLaneLine) {
@@ -116,7 +122,6 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                         }
                     }
                 } else {
-                    // Clean Smooth Quartz pedestrian sidewalk
                     surface = Blocks.SMOOTH_QUARTZ.getDefaultState();
                 }
 
@@ -128,11 +133,9 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                     if (absOff == totalHalf) {
                         addPlacement(groundPos.up(), Blocks.STONE_BRICK_WALL.getDefaultState());
                     } else {
-                        for (int clearY = 1; clearY <= 5; clearY++) {
-                            addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
-                        }
+                        for (int clearY = 1; clearY <= 5; clearY++) addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
                     }
-                    if (i % 12 == 0 && (absOff == asphaltHalf || offset == 0)) {
+                    if (i % 24 == 0 && (absOff == asphaltHalf || offset == 0)) {
                         for (int py = 2; py <= 24; py++) {
                             BlockPos pillarPos = groundPos.down(py);
                             if (world.getBlockState(pillarPos).isSolidBlock(world, pillarPos)) break;
@@ -145,16 +148,11 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
                                 ? Blocks.WHITE_CONCRETE.getDefaultState() : Blocks.AIR.getDefaultState());
                     }
                     BlockPos roofPos = groundPos.up(6);
-                    addPlacement(roofPos, (offset == 0 && i % 6 == 0)
+                    addPlacement(roofPos, (offset == 0 && i % 12 == 0)
                             ? Blocks.SEA_LANTERN.getDefaultState() : Blocks.WHITE_CONCRETE.getDefaultState());
                 } else {
-                    for (int clearY = 1; clearY <= 6; clearY++) {
-                        addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
-                    }
-                    // Lamp placement rules:
-                    // TWO_WAY -> lamps in the middle of the grass median!
-                    // ONE_WAY -> lamps on the Smooth Quartz sidewalk!
-                    if (i % 14 == 0) {
+                    for (int clearY = 1; clearY <= 6; clearY++) addPlacement(groundPos.up(clearY), Blocks.AIR.getDefaultState());
+                    if (i % 28 == 0 && Math.abs(offD - offset) < 0.01) {
                         if (directionMode == RoadNetworkManager.DirectionMode.TWO_WAY && isMedianCenter) {
                             placeStreetlight(groundPos, roadClass.isHighway() ? 5 : 4, true);
                         } else if (directionMode == RoadNetworkManager.DirectionMode.ONE_WAY && offset == asphaltHalf + 1) {
@@ -168,9 +166,7 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
 
     private void placeStreetlight(BlockPos base, int height, boolean doubleHead) {
         addPlacement(base.up(1), Blocks.SMOOTH_QUARTZ.getDefaultState());
-        for (int h = 2; h <= height; h++) {
-            addPlacement(base.up(h), Blocks.POLISHED_DEEPSLATE_WALL.getDefaultState());
-        }
+        for (int h = 2; h <= height; h++) addPlacement(base.up(h), Blocks.POLISHED_DEEPSLATE_WALL.getDefaultState());
         addPlacement(base.up(height + 1), Blocks.WHITE_CONCRETE.getDefaultState());
         BlockState lamp = RoadNetworkManager.isManualLitState()
                 ? Blocks.SEA_LANTERN.getDefaultState()
@@ -191,10 +187,42 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         }
     }
 
-    private List<BlockPos> sampleCenterline(BlockPos start, BlockPos end) {
+    private List<BlockPos> sampleCenterline(BlockPos start, BlockPos end, List<BlockPos> waypoints, Direction startFacing) {
         List<BlockPos> pts = new ArrayList<>();
+
+        if (curveType == RoadNetworkManager.CurveType.FOLLOW_PATH && !waypoints.isEmpty()) {
+            List<BlockPos> ctrl = new ArrayList<>();
+            ctrl.add(start);
+            ctrl.addAll(waypoints);
+            ctrl.add(end);
+
+            // Smooth Catmull-Rom spline through all recorded turn points
+            for (int seg = 0; seg < ctrl.size() - 1; seg++) {
+                BlockPos p0 = ctrl.get(Math.max(0, seg - 1));
+                BlockPos p1 = ctrl.get(seg);
+                BlockPos p2 = ctrl.get(seg + 1);
+                BlockPos p3 = ctrl.get(Math.min(ctrl.size() - 1, seg + 2));
+
+                double segDist = Math.hypot(p2.getX() - p1.getX(), p2.getZ() - p1.getZ());
+                int steps = Math.max(4, (int) Math.ceil(segDist * 2.0));
+                for (int i = 0; i <= steps; i++) {
+                    double t = (double) i / steps;
+                    double t2 = t * t;
+                    double t3 = t2 * t;
+                    double x = 0.5 * ((2 * p1.getX()) + (-p0.getX() + p2.getX()) * t
+                            + (2 * p0.getX() - 5 * p1.getX() + 4 * p2.getX() - p3.getX()) * t2
+                            + (-p0.getX() + 3 * p1.getX() - 3 * p2.getX() + p3.getX()) * t3);
+                    double z = 0.5 * ((2 * p1.getZ()) + (-p0.getZ() + p2.getZ()) * t
+                            + (2 * p0.getZ() - 5 * p1.getZ() + 4 * p2.getZ() - p3.getZ()) * t2
+                            + (-p0.getZ() + 3 * p1.getZ() - 3 * p2.getZ() + p3.getZ()) * t3);
+                    pts.add(new BlockPos((int) Math.round(x), start.getY(), (int) Math.round(z)));
+                }
+            }
+            return pts;
+        }
+
         double dist = Math.hypot(end.getX() - start.getX(), end.getZ() - start.getZ());
-        int steps = Math.max(2, (int) Math.ceil(dist * 1.5));
+        int steps = Math.max(4, (int) Math.ceil(dist * 2.0));
         double sx = start.getX(), sz = start.getZ();
         double ex = end.getX(), ez = end.getZ();
 
@@ -202,7 +230,10 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
             double t = (double) i / steps;
             double x, z;
             if (curveType == RoadNetworkManager.CurveType.CORNER90) {
-                double cx = ex, cz = sz;
+                // Turn cleanly using player's starting facing direction!
+                boolean alongX = (startFacing == Direction.EAST || startFacing == Direction.WEST);
+                double cx = alongX ? ex : sx;
+                double cz = alongX ? sz : ez;
                 x = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * cx + t * t * ex;
                 z = (1 - t) * (1 - t) * sz + 2 * (1 - t) * t * cz + t * t * ez;
             } else if (curveType == RoadNetworkManager.CurveType.SCURVE) {
@@ -226,23 +257,12 @@ public class RoadBuilderJob implements StreamingBuilderEngine.BuildJob {
         return pts;
     }
 
-    @Override
-    public String getName() { return roadClass.displayName + " (" + directionMode.name() + ")"; }
-
-    @Override
-    public ServerWorld getWorld() { return world; }
-
-    @Override
-    public UUID getOwnerId() { return ownerId; }
-
-    @Override
-    public long getTotalBlocks() { return placements.size(); }
-
-    @Override
-    public long getPlacedBlocks() { return cursor; }
-
-    @Override
-    public boolean isFinished() { return cursor >= placements.size(); }
+    @Override public String getName() { return roadClass.displayName + " (" + directionMode.name() + ")"; }
+    @Override public ServerWorld getWorld() { return world; }
+    @Override public UUID getOwnerId() { return ownerId; }
+    @Override public long getTotalBlocks() { return placements.size(); }
+    @Override public long getPlacedBlocks() { return cursor; }
+    @Override public boolean isFinished() { return cursor >= placements.size(); }
 
     @Override
     public int processBatch(int maxBlocks, long deadlineNanos) {
